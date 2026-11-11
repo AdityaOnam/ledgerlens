@@ -1,0 +1,36 @@
+From: Brightdesk Billing <billing@brightdesk.io>
+To: Priya Raman <priya.raman@acme-robotics.com>
+Subject: Countersigned order form OF-2025-311
+Date: Thu, 20 Nov 2025 10:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============2775263962514978876=="
+
+--===============2775263962514978876==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hi Priya, attached is the countersigned order form.
+
+--===============2775263962514978876==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="OF-2025-311.txt"
+MIME-Version: 1.0
+
+ORDER FORM OF-2025-311
+Vendor: Brightdesk Inc.
+Customer: Acme Robotics Ltd.
+Vendor contact: accounts@brightdesk.io
+Term start: 2025-12-01
+Term end: 2026-11-30
+Auto-renewal: yes
+Notice period: 60 days
+Renewal uplift cap: 7%
+True-up: not permitted
+Signed: Priya Raman, VP Finance
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| BD-PRO | Brightdesk Pro seat | 38.00 | 120 |
+| BD-ANALYTICS | Analytics add-on | 600.00 | 1 |
+
+--===============2775263962514978876==--

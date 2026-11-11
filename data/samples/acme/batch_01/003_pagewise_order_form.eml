@@ -1,0 +1,35 @@
+From: Pagewise Billing <billing@pagewise.app>
+To: Priya Raman <priya.raman@acme-robotics.com>
+Subject: Pagewise order
+Date: Thu, 20 Mar 2025 12:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============2815242122490817825=="
+
+--===============2815242122490817825==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Welcome to Pagewise!
+
+--===============2815242122490817825==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="OF-2025-090.txt"
+MIME-Version: 1.0
+
+ORDER FORM OF-2025-090
+Vendor: Pagewise
+Customer: Acme Robotics Ltd.
+Vendor contact: team@pagewise.app
+Term start: 2025-04-01
+Term end: 2026-03-31
+Auto-renewal: yes
+Notice period: 30 days
+Renewal uplift cap: 5%
+True-up: not permitted
+Signed: Priya Raman, VP Finance
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| PW-TEAM | Pagewise Team seat | 12.00 | 50 |
+
+--===============2815242122490817825==--

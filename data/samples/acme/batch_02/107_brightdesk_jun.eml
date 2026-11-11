@@ -1,0 +1,28 @@
+From: Brightdesk Billing <billing@brightdesk.io>
+To: AP Team <ap@acme-robotics.com>
+Subject: Invoice INV-BD-1190
+Date: Mon, 01 Jun 2026 08:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============0111764767638271441=="
+
+--===============0111764767638271441==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Your June invoice is attached.
+
+--===============0111764767638271441==
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="INV-BD-1190.csv"
+MIME-Version: 1.0
+
+invoice_id,INV-BD-1190
+vendor,Brightdesk Inc.
+issued,2026-06-01
+due,2026-07-01
+total,4560.00
+line,sku,description,period_start,period_end,qty,unit_price,amount
+line,BD-PRO,Pro seat,2026-06-01,2026-06-30,120,38.00,4560.00
+
+--===============0111764767638271441==--

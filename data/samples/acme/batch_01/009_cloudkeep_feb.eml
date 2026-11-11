@@ -1,0 +1,28 @@
+From: Cloudkeep Support <support@cloudkeep.com>
+To: AP Team <ap@acme-robotics.com>
+Subject: Invoice INV-CK-309
+Date: Mon, 02 Feb 2026 08:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============3025734670928862010=="
+
+--===============3025734670928862010==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Invoice attached.
+
+--===============3025734670928862010==
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="INV-CK-309.csv"
+MIME-Version: 1.0
+
+invoice_id,INV-CK-309
+vendor,Cloudkeep Ltd.
+issued,2026-02-02
+due,2026-03-04
+total,946.00
+line,sku,description,period_start,period_end,qty,unit_price,amount
+line,CK-STORE-TB,Backup storage,2026-02-01,2026-02-28,44,21.50,946.00
+
+--===============3025734670928862010==--

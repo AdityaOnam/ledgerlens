@@ -1,0 +1,29 @@
+From: Brightdesk Billing <billing@brightdesk.io>
+To: AP Team <ap@acme-robotics.com>
+Subject: Invoice INV-BD-1041
+Date: Thu, 01 Jan 2026 08:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============7041124454724815177=="
+
+--===============7041124454724815177==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Your January invoice is attached.
+
+--===============7041124454724815177==
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="INV-BD-1041.csv"
+MIME-Version: 1.0
+
+invoice_id,INV-BD-1041
+vendor,Brightdesk Inc.
+issued,2026-01-01
+due,2026-01-31
+total,5160.00
+line,sku,description,period_start,period_end,qty,unit_price,amount
+line,BD-PRO,Pro seat,2026-01-01,2026-01-31,120,38.00,4560.00
+line,BD-ANALYTICS,Analytics add-on,2026-01-01,2026-01-31,1,600.00,600.00
+
+--===============7041124454724815177==--

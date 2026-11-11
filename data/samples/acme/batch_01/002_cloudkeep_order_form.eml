@@ -1,0 +1,34 @@
+From: Cloudkeep Support <support@cloudkeep.com>
+To: Priya Raman <priya.raman@acme-robotics.com>
+Subject: Cloudkeep order form
+Date: Mon, 15 Dec 2025 09:30:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============7896214761536119840=="
+
+--===============7896214761536119840==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Please find the signed order form attached.
+
+--===============7896214761536119840==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="OF-2026-019.txt"
+MIME-Version: 1.0
+
+ORDER FORM OF-2026-019
+Vendor: Cloudkeep Ltd.
+Customer: Acme Robotics Ltd.
+Vendor contact: sales@cloudkeep.com
+Term start: 2026-01-01
+Term end: 2026-12-31
+Auto-renewal: no
+Notice period: 30 days
+True-up: permitted at contract price
+Signed: Priya Raman, VP Finance
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| CK-STORE-TB | Backup storage, per TB | 21.50 | 40 |
+
+--===============7896214761536119840==--

@@ -1,0 +1,30 @@
+From: Brightdesk Billing <billing@brightdesk.io>
+To: Priya Raman <priya.raman@acme-robotics.com>
+Subject: Amendment AM-2026-03
+Date: Mon, 25 May 2026 10:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============5802738627699545091=="
+
+--===============5802738627699545091==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Signed amendment attached.
+
+--===============5802738627699545091==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="AM-2026-03.txt"
+MIME-Version: 1.0
+
+AMENDMENT AM-2026-03 to OF-2025-311
+Vendor: Brightdesk Inc.
+Vendor contact: accounts@brightdesk.io
+Effective: 2026-06-01
+Term end: 2026-11-30
+Signed: Priya Raman, VP Finance
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| BD-PRO | Brightdesk Pro seat | 36.00 | 120 |
+
+--===============5802738627699545091==--

@@ -1,0 +1,28 @@
+From: Pagewise Billing <billing@pagewise.app>
+To: AP Team <ap@acme-robotics.com>
+Subject: Invoice INV-PW-077
+Date: Wed, 01 Apr 2026 08:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============4580274119334572981=="
+
+--===============4580274119334572981==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Thanks for renewing!
+
+--===============4580274119334572981==
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="INV-PW-077.csv"
+MIME-Version: 1.0
+
+invoice_id,INV-PW-077
+vendor,Pagewise
+issued,2026-04-01
+due,2026-05-01
+total,660.00
+line,sku,description,period_start,period_end,qty,unit_price,amount
+line,PW-TEAM,Team seat,2026-04-01,2026-04-30,50,13.20,660.00
+
+--===============4580274119334572981==--
