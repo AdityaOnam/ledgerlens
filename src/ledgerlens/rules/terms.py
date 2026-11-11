@@ -50,18 +50,27 @@ def resolve(agreements: list[Agreement], vendor: str, sku: str, on: date) -> Res
     term = base.term_for(sku)
     assert term is not None
 
-    amendments = [a for a in agreements if a.amends == base.agreement_id and a.term_for(sku)
-                  and a.effective is not None and a.effective <= on]
+    amendments = [
+        a
+        for a in agreements
+        if a.amends == base.agreement_id
+        and a.term_for(sku)
+        and a.effective is not None
+        and a.effective <= on
+    ]
     price, qty, evidence = term.unit_price, term.licensed_qty, [term.evidence]
     if amendments:
         latest = max(a.effective for a in amendments)  # type: ignore[type-var]
         same_day = [a for a in amendments if a.effective == latest]
         prices = {a.term_for(sku).unit_price for a in same_day}  # type: ignore[union-attr]
         if len(prices) > 1:
-            cands = [(a.term_for(sku).unit_price, a.term_for(sku).evidence)  # type: ignore[union-attr]
-                     for a in same_day]
-            return Resolved("conflict", licensed_qty=qty, candidates=cands,
-                            true_up_allowed=base.true_up_allowed)
+            cands = [
+                (a.term_for(sku).unit_price, a.term_for(sku).evidence)  # type: ignore[union-attr]
+                for a in same_day
+            ]
+            return Resolved(
+                "conflict", licensed_qty=qty, candidates=cands, true_up_allowed=base.true_up_allowed
+            )
         amended = same_day[0].term_for(sku)
         assert amended is not None
         price, qty, evidence = amended.unit_price, amended.licensed_qty, [amended.evidence]
@@ -74,6 +83,9 @@ def resolve(agreements: list[Agreement], vendor: str, sku: str, on: date) -> Res
     ceiling = price
     for _ in range(years):
         ceiling = money(ceiling * (1 + base.uplift_cap))
-    cap_line = Evidence(base.evidence.doc_id, f"Renewal uplift cap: {(base.uplift_cap * 100).normalize():f}%")
-    return Resolved("renewal", ceiling, qty, base.true_up_allowed, years, price,
-                    [*evidence, cap_line])
+    cap_line = Evidence(
+        base.evidence.doc_id, f"Renewal uplift cap: {(base.uplift_cap * 100).normalize():f}%"
+    )
+    return Resolved(
+        "renewal", ceiling, qty, base.true_up_allowed, years, price, [*evidence, cap_line]
+    )

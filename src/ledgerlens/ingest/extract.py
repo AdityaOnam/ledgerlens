@@ -70,8 +70,15 @@ def _price_table(text: str, doc_id: str) -> list[PriceTerm]:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) == 4 and re.fullmatch(SKU, cells[0]):
             sku, desc, price, qty = cells
-            terms.append(PriceTerm(sku, desc, money(price), int(qty.replace(",", "")),
-                                   Evidence(doc_id, line.strip())))
+            terms.append(
+                PriceTerm(
+                    sku,
+                    desc,
+                    money(price),
+                    int(qty.replace(",", "")),
+                    Evidence(doc_id, line.strip()),
+                )
+            )
     return terms
 
 
@@ -120,8 +127,18 @@ def extract_invoice(doc: Document) -> Invoice | None:
         raw = ",".join(r)
         if r[0] == "line" and len(r) == 8 and r[1] != "sku":
             _, sku, desc, ps, pe, qty, unit, amount = (c.strip() for c in r)
-            lines.append(InvoiceLine(sku, desc, parse_date(ps), parse_date(pe), int(qty),
-                                     money(unit), money(amount), Evidence(doc.doc_id, raw)))
+            lines.append(
+                InvoiceLine(
+                    sku,
+                    desc,
+                    parse_date(ps),
+                    parse_date(pe),
+                    int(qty),
+                    money(unit),
+                    money(amount),
+                    Evidence(doc.doc_id, raw),
+                )
+            )
         elif r[0] == "credit" and len(r) == 3:
             credits.append(AppliedCredit(r[1].strip(), -money(r[2]), Evidence(doc.doc_id, raw)))
     return Invoice(
@@ -138,10 +155,12 @@ def extract_invoice(doc: Document) -> Invoice | None:
 
 # --- email statements -----------------------------------------------------------------------
 
-_CANCEL = re.compile(rf"[^.\n]*\bcancel\w*\b[^.\n]*?\b({SKU})\b[^.\n]*?\beffective\s+({DATE})[^.\n]*",
-                     re.I)
+_CANCEL = re.compile(
+    rf"[^.\n]*\bcancel\w*\b[^.\n]*?\b({SKU})\b[^.\n]*?\beffective\s+({DATE})[^.\n]*", re.I
+)
 _CREDIT = re.compile(
-    rf"[^.\n]*\bcredit of\s+\$?([\d,]+\.\d{{2}})[^.\n]*?\(ref\s+([A-Z0-9-]+)\)[^.\n]*", re.I)
+    r"[^.\n]*\bcredit of\s+\$?([\d,]+\.\d{2})[^.\n]*?\(ref\s+([A-Z0-9-]+)\)[^.\n]*", re.I
+)
 _REF = re.compile(rf"[^.\n]*\b(order form|amendment)\s+({DOC_REF})\b[^.\n]*", re.I)
 
 
@@ -152,19 +171,42 @@ def _domain(addr: str) -> str:
 def extract_email(doc: Document, vendor_domains: dict[str, str]) -> Extraction:
     out = Extraction()
     parties = [doc.sender, *doc.recipients]
-    vendor = next((vendor_domains[_domain(a)] for a in parties if _domain(a) in vendor_domains), None)
+    vendor = next(
+        (vendor_domains[_domain(a)] for a in parties if _domain(a) in vendor_domains), None
+    )
     if vendor is None:
         return out
     for m in _CANCEL.finditer(doc.text):
-        out.cancellations.append(Cancellation(vendor, m.group(1), parse_date(m.group(2)),
-                                              doc.sender, Evidence(doc.doc_id, m.group(0).strip())))
+        out.cancellations.append(
+            Cancellation(
+                vendor,
+                m.group(1),
+                parse_date(m.group(2)),
+                doc.sender,
+                Evidence(doc.doc_id, m.group(0).strip()),
+            )
+        )
     for m in _CREDIT.finditer(doc.text):
-        out.credits.append(CreditPromise(vendor, m.group(2), money(m.group(1)), doc.sent,
-                                         Evidence(doc.doc_id, m.group(0).strip())))
+        out.credits.append(
+            CreditPromise(
+                vendor,
+                m.group(2),
+                money(m.group(1)),
+                doc.sent,
+                Evidence(doc.doc_id, m.group(0).strip()),
+            )
+        )
     holder = next((a for a in parties if _domain(a) in vendor_domains), doc.sender)
     for m in _REF.finditer(doc.text):
-        out.references.append(DocumentReference(vendor, m.group(2), m.group(1).lower(), holder,
-                                                 Evidence(doc.doc_id, m.group(0).strip())))
+        out.references.append(
+            DocumentReference(
+                vendor,
+                m.group(2),
+                m.group(1).lower(),
+                holder,
+                Evidence(doc.doc_id, m.group(0).strip()),
+            )
+        )
     return out
 
 

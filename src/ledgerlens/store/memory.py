@@ -58,8 +58,11 @@ class Memory:
         if not path.exists():
             return cls()
         raw = json.loads(path.read_text(encoding="utf-8"))
-        mem = cls(vendor_domains=raw.get("vendor_domains", {}), batches=raw.get("batches", []),
-                  reported=raw.get("reported", {}))
+        mem = cls(
+            vendor_domains=raw.get("vendor_domains", {}),
+            batches=raw.get("batches", []),
+            reported=raw.get("reported", {}),
+        )
         for name, tp in FACT_TYPES.items():
             setattr(mem, name, [decode(tp, d) for d in raw.get(name, [])])
         return mem
@@ -67,8 +70,11 @@ class Memory:
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         data = {name: encode(getattr(self, name)) for name in FACT_TYPES}
-        data |= {"vendor_domains": self.vendor_domains, "batches": self.batches,
-                 "reported": self.reported}
+        data |= {
+            "vendor_domains": self.vendor_domains,
+            "batches": self.batches,
+            "reported": self.reported,
+        }
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
         tmp.replace(path)

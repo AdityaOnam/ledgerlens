@@ -3,15 +3,15 @@ To: AP Team <ap@acme-robotics.com>
 Subject: Invoice INV-BD-1078
 Date: Sun, 01 Feb 2026 08:00:00 +0000
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============6008748928670302559=="
+Content-Type: multipart/mixed; boundary="==ledgerlens-008_brightdesk_feb=="
 
---===============6008748928670302559==
+--==ledgerlens-008_brightdesk_feb==
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 
 Your February invoice is attached.
 
---===============6008748928670302559==
+--==ledgerlens-008_brightdesk_feb==
 Content-Type: text/csv; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 Content-Disposition: attachment; filename="INV-BD-1078.csv"
@@ -26,4 +26,4 @@ line,sku,description,period_start,period_end,qty,unit_price,amount
 line,BD-PRO,Pro seat,2026-02-01,2026-02-28,132,38.00,5016.00
 line,BD-ANALYTICS,Analytics add-on,2026-02-01,2026-02-28,1,600.00,600.00
 
---===============6008748928670302559==--
+--==ledgerlens-008_brightdesk_feb==--

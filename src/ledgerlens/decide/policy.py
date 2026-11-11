@@ -39,8 +39,7 @@ class Mode(StrEnum):
     AUTONOMOUS = "autonomous"
 
 
-def decide(finding: Finding, mode: Mode,
-           threshold: Decimal = DEFAULT_REVIEW_THRESHOLD) -> Finding:
+def decide(finding: Finding, mode: Mode, threshold: Decimal = DEFAULT_REVIEW_THRESHOLD) -> Finding:
     action = NATURAL_ACTION[finding.cls]
     if action not in AMOUNT_INDEPENDENT and finding.amount >= threshold:
         action = Action.HUMAN_REVIEW

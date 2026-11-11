@@ -3,15 +3,15 @@ To: AP Team <ap@acme-robotics.com>
 Subject: Invoice INV-FX-0009
 Date: Sun, 05 Jul 2026 08:00:00 +0000
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============5351380410568744085=="
+Content-Type: multipart/mixed; boundary="==ledgerlens-109_fluxmetrics_jul=="
 
---===============5351380410568744085==
+--==ledgerlens-109_fluxmetrics_jul==
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 
 Invoice attached.
 
---===============5351380410568744085==
+--==ledgerlens-109_fluxmetrics_jul==
 Content-Type: text/csv; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 Content-Disposition: attachment; filename="INV-FX-0009.csv"
@@ -25,4 +25,4 @@ total,2400.00
 line,sku,description,period_start,period_end,qty,unit_price,amount
 line,FX-HOST,Managed hosting,2026-07-01,2026-07-31,1,2400.00,2400.00
 
---===============5351380410568744085==--
+--==ledgerlens-109_fluxmetrics_jul==--

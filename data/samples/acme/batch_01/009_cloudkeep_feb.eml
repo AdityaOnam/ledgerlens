@@ -3,15 +3,15 @@ To: AP Team <ap@acme-robotics.com>
 Subject: Invoice INV-CK-309
 Date: Mon, 02 Feb 2026 08:00:00 +0000
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="===============3025734670928862010=="
+Content-Type: multipart/mixed; boundary="==ledgerlens-009_cloudkeep_feb=="
 
---===============3025734670928862010==
+--==ledgerlens-009_cloudkeep_feb==
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 
 Invoice attached.
 
---===============3025734670928862010==
+--==ledgerlens-009_cloudkeep_feb==
 Content-Type: text/csv; charset="utf-8"
 Content-Transfer-Encoding: 7bit
 Content-Disposition: attachment; filename="INV-CK-309.csv"
@@ -25,4 +25,4 @@ total,946.00
 line,sku,description,period_start,period_end,qty,unit_price,amount
 line,CK-STORE-TB,Backup storage,2026-02-01,2026-02-28,44,21.50,946.00
 
---===============3025734670928862010==--
+--==ledgerlens-009_cloudkeep_feb==--

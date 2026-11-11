@@ -50,7 +50,9 @@ def read_email(path: Path, doc_prefix: str) -> tuple[list[Document], list[str]]:
     assert isinstance(msg, EmailMessage)
     sent = parsedate_to_datetime(msg["Date"]).date()
     sender = (getaddresses([msg.get("From", "")]) or [("", "")])[0][1].lower()
-    recipients = tuple(a.lower() for _, a in getaddresses(msg.get_all("To", []) + msg.get_all("Cc", [])))
+    recipients = tuple(
+        a.lower() for _, a in getaddresses(msg.get_all("To", []) + msg.get_all("Cc", []))
+    )
     subject = str(msg.get("Subject", ""))
     base = f"{doc_prefix}/{path.stem}"
     docs = [Document(base, "email", path.name, _body_text(msg), sent, sender, recipients, subject)]
@@ -63,7 +65,9 @@ def read_email(path: Path, doc_prefix: str) -> tuple[list[Document], list[str]]:
         text = part.get_content()
         if isinstance(text, bytes):
             text = text.decode("utf-8", errors="replace")
-        docs.append(Document(f"{base}/{name}", "attachment", name, text, sent, sender, recipients, subject))
+        docs.append(
+            Document(f"{base}/{name}", "attachment", name, text, sent, sender, recipients, subject)
+        )
     return docs, skipped
 
 

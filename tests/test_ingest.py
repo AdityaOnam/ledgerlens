@@ -38,9 +38,11 @@ def test_order_form_fields_and_evidence():
 
 
 def test_invoice_lines_and_credits():
-    text = ("invoice_id,INV-1\nvendor,V\nissued,2026-02-01\ndue,2026-03-01\ntotal,10.00\n"
-            "line,sku,description,period_start,period_end,qty,unit_price,amount\n"
-            "line,X-1,thing,2026-02-01,2026-02-28,2,10.00,20.00\ncredit,SLA-1,-10.00\n")
+    text = (
+        "invoice_id,INV-1\nvendor,V\nissued,2026-02-01\ndue,2026-03-01\ntotal,10.00\n"
+        "line,sku,description,period_start,period_end,qty,unit_price,amount\n"
+        "line,X-1,thing,2026-02-01,2026-02-28,2,10.00,20.00\ncredit,SLA-1,-10.00\n"
+    )
     inv = extract_invoice(doc(text))
     assert inv.lines[0].qty == 2 and inv.lines[0].amount == Decimal("20.00")
     assert inv.credits[0].ref == "SLA-1" and inv.credits[0].amount == Decimal("10.00")

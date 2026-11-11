@@ -150,8 +150,15 @@ class Finding:
     def key(self) -> str:
         """Stable identity, so the same problem found in two batches is reported once."""
         return "|".join(
-            str(x) for x in (self.cls, self.vendor, self.invoice_id or "", self.sku or "",
-                             self.details.get("period", ""), self.details.get("ref", ""))
+            str(x)
+            for x in (
+                self.cls,
+                self.vendor,
+                self.invoice_id or "",
+                self.sku or "",
+                self.details.get("period", ""),
+                self.details.get("ref", ""),
+            )
         )
 
     def to_dict(self) -> dict[str, Any]:
