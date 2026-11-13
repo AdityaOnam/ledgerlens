@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ledgerlens.decide.policy import DEFAULT_REVIEW_THRESHOLD, Mode, decide
 from ledgerlens.domain.models import Finding
-from ledgerlens.ingest.extract import extract
+from ledgerlens.ingest.extract import Extractor, extract
 from ledgerlens.ingest.mailbox import read_mailbox
 from ledgerlens.rules.detectors import detect
 from ledgerlens.store.memory import Memory
@@ -29,15 +29,19 @@ def run(
     mode: Mode = Mode.SUPERVISED,
     threshold: Decimal = DEFAULT_REVIEW_THRESHOLD,
     as_of: date | None = None,
+    extractor: Extractor = extract,
 ) -> list[BatchResult]:
-    """Process every batch not yet in memory. Findings already reported are not repeated."""
+    """Process every batch not yet in memory. Findings already reported are not repeated.
+
+    ``extractor`` turns documents into facts: the layout reader by default, or an LLM-backed
+    one. Detectors and the policy are the same either way."""
     path = state_dir / "memory.json"
     mem = Memory.load(path)
     results = []
     for batch in read_mailbox(mailbox):
         if batch.name in mem.batches:
             continue
-        x = extract(batch.documents, mem.vendor_domains)
+        x = extractor(batch.documents, mem.vendor_domains)
         mem.absorb(batch.name, x)
         day = as_of or batch.as_of or date.today()
         result = BatchResult(batch.name, day, notes=[*batch.skipped, *x.unread])

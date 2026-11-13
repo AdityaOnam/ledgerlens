@@ -2,7 +2,13 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from ledgerlens.ingest.extract import extract, extract_agreement, extract_email, extract_invoice
+from ledgerlens.ingest.extract import (
+    Extraction,
+    extract,
+    extract_agreement,
+    extract_email,
+    extract_invoice,
+)
 from ledgerlens.ingest.mailbox import Document, read_mailbox
 
 SAMPLES = Path(__file__).resolve().parents[1] / "data" / "samples" / "acme"
@@ -71,3 +77,35 @@ def test_sample_mailbox_reads_cleanly():
     assert [b.name for b in batches] == ["batch_01", "batch_02"]
     for b in batches:
         assert extract(b.documents, {}).unread == []
+
+
+def test_fallback_reads_what_the_layout_cannot():
+    seen = []
+
+    def fallback(d, domains):
+        seen.append(d.doc_id)
+        return Extraction(vendor_domains={"quill.test": "Quillstack"})
+
+    x = extract([doc("free-form prose", sender="ar@quill.test")], {}, fallback=fallback)
+    assert seen == ["t/1"] and x.unread == [] and x.vendor_domains == {"quill.test": "Quillstack"}
+
+
+def test_fallback_returning_none_keeps_the_unread_note():
+    x = extract([doc("hello")], {}, fallback=lambda d, domains: None)
+    assert x.unread == ["t/1: layout not recognised"]
+
+
+def test_fallback_only_sees_known_vendor_emails_without_stock_sentences():
+    seen = []
+
+    def fallback(d, domains):
+        seen.append(d.text)
+        return None
+
+    known = {"brightdesk.io": "Brightdesk Inc."}
+    stock = doc("Please cancel BD-ANALYTICS effective 2026-02-01.", "email")
+    prose = doc("Let's drop analytics from next month.", "email")
+    stranger = doc("Hello there.", "email", sender="x@unknown.test")
+    x = extract([stock, prose, stranger], known, fallback=fallback)
+    assert seen == ["Let's drop analytics from next month."]
+    assert len(x.cancellations) == 1

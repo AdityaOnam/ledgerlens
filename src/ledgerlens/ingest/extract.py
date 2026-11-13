@@ -2,8 +2,9 @@
 
 This is the layout-based extractor: it understands the plain-text order forms, CSV invoices and
 the stock sentences vendors use in email. Every fact keeps the exact line it was read from.
-A model-based extractor with the same output type replaces it for free-form documents (roadmap
-day 2); rules never know which one produced a fact.
+
+Documents the layout cannot read can be handed to a fallback reader (the model-based extractor
+in ``ingest.llm``). Both produce the same Extraction, so rules never know which one read a fact.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from ledgerlens.domain.dates import parse_date
@@ -47,6 +49,18 @@ class Extraction:
         for name in ("agreements", "invoices", "cancellations", "credits", "references", "unread"):
             getattr(self, name).extend(getattr(other, name))
         self.vendor_domains.update(other.vendor_domains)
+
+    @property
+    def empty(self) -> bool:
+        return not any(
+            (self.agreements, self.invoices, self.cancellations, self.credits, self.references)
+        )
+
+
+# Reads one document the layout did not understand; None means "not read either".
+Fallback = Callable[[Document, dict[str, str]], Extraction | None]
+# Anything that turns a batch of documents into facts: the layout `extract`, or an LLM extractor.
+Extractor = Callable[[list[Document], dict[str, str]], Extraction]
 
 
 # --- order forms and amendments -------------------------------------------------------------
@@ -168,12 +182,22 @@ def _domain(addr: str) -> str:
     return addr.split("@")[-1].lower()
 
 
+def email_vendor(doc: Document, vendor_domains: dict[str, str]) -> str | None:
+    """The vendor an email is with, judged only by sender and recipient domains."""
+    return next(
+        (
+            vendor_domains[_domain(a)]
+            for a in (doc.sender, *doc.recipients)
+            if _domain(a) in vendor_domains
+        ),
+        None,
+    )
+
+
 def extract_email(doc: Document, vendor_domains: dict[str, str]) -> Extraction:
     out = Extraction()
     parties = [doc.sender, *doc.recipients]
-    vendor = next(
-        (vendor_domains[_domain(a)] for a in parties if _domain(a) in vendor_domains), None
-    )
+    vendor = email_vendor(doc, vendor_domains)
     if vendor is None:
         return out
     for m in _CANCEL.finditer(doc.text):
@@ -210,14 +234,24 @@ def extract_email(doc: Document, vendor_domains: dict[str, str]) -> Extraction:
     return out
 
 
-def extract(documents: list[Document], vendor_domains: dict[str, str]) -> Extraction:
+def extract(
+    documents: list[Document],
+    vendor_domains: dict[str, str],
+    fallback: Fallback | None = None,
+) -> Extraction:
     """Attachments first: agreements and invoices teach us which domain is which vendor.
-    Emails are read afterwards, so a cover note can be tied to its vendor."""
+    Emails are read afterwards, so a cover note can be tied to its vendor.
+
+    With a ``fallback``, an attachment whose layout is not recognised, or an email from a known
+    vendor in which no stock sentence matched, is passed to it instead of being given up on."""
     out = Extraction()
 
     def learn(domain: str, vendor: str) -> None:
         if domain and vendor and domain not in vendor_domains:
             out.vendor_domains.setdefault(domain, vendor)
+
+    def known() -> dict[str, str]:
+        return {**out.vendor_domains, **vendor_domains}
 
     emails = []
     for doc in documents:
@@ -234,9 +268,18 @@ def extract(documents: list[Document], vendor_domains: dict[str, str]) -> Extrac
         if invoice:
             out.invoices.append(invoice)
             learn(_domain(doc.sender), invoice.vendor)
-        else:
+            continue
+        read = fallback(doc, known()) if fallback else None
+        if read is None:
             out.unread.append(f"{doc.doc_id}: layout not recognised")
-    domains = {**out.vendor_domains, **vendor_domains}
+            continue
+        out.extend(read)
+        for domain, vendor in read.vendor_domains.items():
+            learn(domain, vendor)
+    domains = known()
     for doc in emails:
-        out.extend(extract_email(doc, domains))
+        found_email = extract_email(doc, domains)
+        if found_email.empty and fallback and email_vendor(doc, domains):
+            found_email = fallback(doc, domains) or found_email
+        out.extend(found_email)
     return out
