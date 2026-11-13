@@ -49,12 +49,40 @@ ledgerlens audit data/samples/acme --mode supervised
 pytest
 ```
 
+## Reading free-form documents with Claude
+
+Well-formed order forms and CSV invoices are read by a layout parser, with no model involved.
+Documents it cannot parse (a prose order confirmation, an email that agrees terms in its own
+words) can be read by Claude instead:
+
+```bash
+pip install -e ".[llm]"
+export ANTHROPIC_API_KEY=...        # PowerShell: $env:ANTHROPIC_API_KEY = "..."
+ledgerlens audit data/samples/acme --extractor llm
+```
+
+- `--extractor auto` (default) uses Claude only when `ANTHROPIC_API_KEY` is set and the
+  `anthropic` package is installed, and otherwise uses the layout parser on its own.
+  `--extractor layout` never calls a model.
+- The model answers in a strict JSON schema, and every fact must include a verbatim quote.
+  A fact is kept only if its quote appears in the document word for word and its identifier
+  and amount appear inside that quote. Rejected facts are listed as notes in the report.
+- Responses are cached in `.cache/llm` (change it with `--cache`), keyed by model, prompt
+  and document. Re-running an audit makes no new calls.
+- The default model is `claude-sonnet-5-5` (change it with `--model`). Email statements
+  (cancellations, credit promises) are matched to a vendor by email domain, never by what the
+  model says.
+
+The grounding check proves that a quote is in the document. It cannot prove the document is
+honest: text planted in a document can still be quoted. That is why every finding shows its
+quotes, and why the action policy decides what happens next, not the model.
+
 ## Layout
 
 ```
 src/ledgerlens/
   domain/    money, dates, typed facts and findings
-  ingest/    mailbox reader and document parsers
+  ingest/    mailbox reader, layout parser, LLM extractor, grounding check, cache
   store/     on-disk memory of agreed terms, carried across batches
   rules/     one detector per finding class
   decide/    action policy (supervised / autonomous)
