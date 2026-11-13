@@ -13,6 +13,7 @@ authors = [{ name = "Aditya Onam" }]
 dependencies = []
 
 [project.optional-dependencies]
+llm = ["anthropic>=2.8,<3"]
 dev = ["pytest>=8", "ruff>=0.5"]
 
 [project.scripts]

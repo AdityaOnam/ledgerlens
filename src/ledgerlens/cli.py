@@ -1,17 +1,51 @@
-"""ledgerlens audit <mailbox> [--mode supervised|autonomous] [--state DIR] [--out DIR]"""
+"""ledgerlens audit <mailbox> [--mode supervised|autonomous] [--extractor auto|layout|llm]
+
+With --extractor auto (the default) documents the layout reader cannot parse are sent to Claude
+when ANTHROPIC_API_KEY is set and the optional `anthropic` package is installed; otherwise the
+layout reader works alone."""
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
+import os
 import shutil
 import sys
+from collections.abc import Mapping
 from decimal import Decimal
 from pathlib import Path
 
 from ledgerlens.app import run
 from ledgerlens.decide.policy import DEFAULT_REVIEW_THRESHOLD, Mode
 from ledgerlens.domain.dates import parse_date
+from ledgerlens.ingest.extract import Extractor, extract
 from ledgerlens.report.render import write
+
+EXTRACTORS = ("auto", "layout", "llm")
+
+
+def choose_extractor(
+    name: str, cache_dir: Path, model: str | None = None, env: Mapping[str, str] | None = None
+) -> tuple[Extractor, str]:
+    """Pick the extractor; returns it with a one-line description for the console.
+
+    Raises SystemExit with a clear message if 'llm' is asked for but cannot run."""
+    env = os.environ if env is None else env
+    has_key = bool(env.get("ANTHROPIC_API_KEY"))
+    has_sdk = importlib.util.find_spec("anthropic") is not None
+    if name == "layout" or (name == "auto" and not (has_key and has_sdk)):
+        why = ""
+        if name == "auto":
+            why = " (ANTHROPIC_API_KEY not set)" if not has_key else " (anthropic not installed)"
+        return extract, f"layout reader{why}"
+    if not has_key:
+        raise SystemExit("--extractor llm needs ANTHROPIC_API_KEY in the environment")
+    if not has_sdk:
+        raise SystemExit('--extractor llm needs the SDK: pip install "ledgerlens[llm]"')
+    from ledgerlens.ingest.llm import DEFAULT_MODEL, AnthropicClient, LLMExtractor
+
+    client = AnthropicClient(model or DEFAULT_MODEL)
+    return LLMExtractor(client, cache_dir), f"layout reader + {client.model} (cache: {cache_dir})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,13 +59,20 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--threshold", type=Decimal, default=DEFAULT_REVIEW_THRESHOLD)
     a.add_argument("--as-of", type=parse_date, default=None)
     a.add_argument("--reset", action="store_true", help="forget all earlier batches first")
+    a.add_argument("--extractor", choices=EXTRACTORS, default="auto")
+    a.add_argument("--model", default=None, help="Claude model for --extractor llm/auto")
+    a.add_argument("--cache", type=Path, default=Path(".cache/llm"), help="model response cache")
     args = p.parse_args(argv)
 
     if not args.mailbox.is_dir():
         p.error(f"mailbox not found: {args.mailbox}")
     if args.reset and args.state.exists():
         shutil.rmtree(args.state)
-    results = run(args.mailbox, args.state, Mode(args.mode), args.threshold, args.as_of)
+    extractor, described = choose_extractor(args.extractor, args.cache, args.model)
+    print(f"Extractor: {described}")
+    results = run(
+        args.mailbox, args.state, Mode(args.mode), args.threshold, args.as_of, extractor=extractor
+    )
     if not results:
         print("No new batches.")
         return 0

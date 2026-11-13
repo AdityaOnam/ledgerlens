@@ -10,3 +10,4 @@ out/
 .state/
 .env
 .env.*
+.cache/
