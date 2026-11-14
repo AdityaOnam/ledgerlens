@@ -110,6 +110,14 @@ class Invoice:
     credits: tuple[AppliedCredit, ...]
     total: Decimal
     evidence: Evidence
+    total_evidence: Evidence | None = None  # the line that prints the total, when there is one
+
+    @property
+    def computed_total(self) -> Decimal:
+        """What the lines and applied credits add up to (credits are stored as positive)."""
+        return sum((x.amount for x in self.lines), Decimal(0)) - sum(
+            (c.amount for c in self.credits), Decimal(0)
+        )
 
 
 class FindingClass(StrEnum):
