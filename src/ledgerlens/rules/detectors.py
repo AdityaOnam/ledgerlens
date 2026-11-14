@@ -246,5 +246,41 @@ def check_renewals(mem: Memory, as_of: date) -> Iterator[Finding]:
         )
 
 
+def check_totals(mem: Memory) -> Iterator[Finding]:
+    """Completeness: the lines and credits read from an invoice must add up to its printed total.
+
+    When they do not, either a line was missed in reading (a scan, a page break) or the vendor's
+    arithmetic is wrong. The code cannot tell which, so it says so and a person looks; the gap
+    itself is the amount at stake. Line checks still run on the lines that were read."""
+    for inv in _ordered(mem.invoices):
+        gap = inv.total - inv.computed_total
+        if gap == 0:
+            continue
+        direction = "more" if gap > 0 else "less"
+        yield Finding(
+            C.CANNOT_DETERMINE,
+            inv.vendor,
+            f"{inv.invoice_id} prints a total of ${inv.total}, ${abs(gap)} {direction} than its "
+            f"lines and credits (${inv.computed_total}); a line may be missing from the reading "
+            "or the total may be wrong",
+            money(abs(gap)),
+            [inv.evidence, *([inv.total_evidence] if inv.total_evidence else [])],
+            invoice_id=inv.invoice_id,
+            rule="printed_total_mismatch",
+            details={
+                "ref": "total",
+                "printed_total": str(inv.total),
+                "computed_total": str(inv.computed_total),
+                "missing": f"complete copy of {inv.invoice_id}",
+                "holder": inv.vendor,
+            },
+        )
+
+
 def detect(mem: Memory, as_of: date) -> list[Finding]:
-    return [*check_lines(mem), *check_credits(mem, as_of), *check_renewals(mem, as_of)]
+    return [
+        *check_lines(mem),
+        *check_totals(mem),
+        *check_credits(mem, as_of),
+        *check_renewals(mem, as_of),
+    ]

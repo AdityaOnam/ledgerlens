@@ -1,7 +1,8 @@
 """Turn documents into typed facts.
 
-This is the layout-based extractor: it understands the plain-text order forms, CSV invoices and
-the stock sentences vendors use in email. Every fact keeps the exact line it was read from.
+This is the layout-based extractor: it understands the plain-text order forms, CSV invoices,
+printed invoices (the text of a PDF or a scan) and the stock sentences vendors use in email.
+Every fact keeps the exact line it was read from.
 
 Documents the layout cannot read can be handed to a fallback reader (the model-based extractor
 in ``ingest.llm``). Both produce the same Extraction, so rules never know which one read a fact.
@@ -155,6 +156,7 @@ def extract_invoice(doc: Document) -> Invoice | None:
             )
         elif r[0] == "credit" and len(r) == 3:
             credits.append(AppliedCredit(r[1].strip(), -money(r[2]), Evidence(doc.doc_id, raw)))
+    total_row = next((r for r in rows if len(r) == 2 and r[0].strip().lower() == "total"), None)
     return Invoice(
         invoice_id=head["invoice_id"],
         vendor=head.get("vendor", ""),
@@ -164,6 +166,68 @@ def extract_invoice(doc: Document) -> Invoice | None:
         credits=tuple(credits),
         total=money(head.get("total", "0")),
         evidence=Evidence(doc.doc_id, f"invoice_id,{head['invoice_id']}"),
+        total_evidence=Evidence(doc.doc_id, ",".join(total_row)) if total_row else None,
+    )
+
+
+# A printed invoice, as text comes out of a PDF or OCR:
+#
+#   INVOICE INV-CK-410
+#   Vendor: Cloudkeep Ltd.
+#   Issued: 2026-03-01
+#   Due: 2026-03-31
+#   | SKU | Description | Period | Qty | Unit price | Amount |
+#   | CK-STORAGE | Storage (TB-month) | 2026-03-01 to 2026-03-31 | 40 | 21.50 | 860.00 |
+#   | Credit | SLA-2026-02 | | | | -350.00 |
+#   Total due: 510.00
+
+_INVOICE_HEADER = re.compile(r"^\s*INVOICE\s+(?:NO\.?\s*|#\s*)?([A-Z]{2,}-[A-Z0-9-]+)\b", re.M)
+_PERIOD = re.compile(rf"^({DATE})\s+(?:to|-|–|—)\s+({DATE})$")
+_TOTAL = re.compile(r"^\s*(?:invoice\s+)?total(?:\s+due)?\s*:\s*(.+?)\s*$", re.I | re.M)
+
+
+def extract_printed_invoice(doc: Document) -> Invoice | None:
+    head = _INVOICE_HEADER.search(doc.text)
+    total = _TOTAL.search(doc.text)
+    if not head or not total:
+        return None
+    f = _fields(doc.text)
+    if "issued" not in f or "due" not in f:
+        return None
+    lines, credits = [], []
+    for raw in doc.text.splitlines():
+        cells = [c.strip() for c in raw.strip().strip("|").split("|")]
+        if len(cells) != 6:
+            continue
+        quote = raw.strip()
+        if cells[0].lower() == "credit" and cells[1]:
+            credits.append(AppliedCredit(cells[1], -money(cells[5]), Evidence(doc.doc_id, quote)))
+            continue
+        period = _PERIOD.match(cells[2])
+        if not re.fullmatch(SKU, cells[0]) or not period:
+            continue
+        lines.append(
+            InvoiceLine(
+                cells[0],
+                cells[1],
+                parse_date(period.group(1)),
+                parse_date(period.group(2)),
+                int(cells[3].replace(",", "")),
+                money(cells[4]),
+                money(cells[5]),
+                Evidence(doc.doc_id, quote),
+            )
+        )
+    return Invoice(
+        invoice_id=head.group(1),
+        vendor=f["vendor"][0] if "vendor" in f else "",
+        issued=parse_date(f["issued"][0]),
+        due=parse_date(f["due"][0]),
+        lines=tuple(lines),
+        credits=tuple(credits),
+        total=money(total.group(1)),
+        evidence=Evidence(doc.doc_id, head.group(0).strip()),
+        total_evidence=Evidence(doc.doc_id, total.group(0).strip()),
     )
 
 
@@ -264,7 +328,7 @@ def extract(
             out.agreements.append(agreement)
             learn(domain, agreement.vendor)
             continue
-        invoice = extract_invoice(doc)
+        invoice = extract_invoice(doc) or extract_printed_invoice(doc)
         if invoice:
             out.invoices.append(invoice)
             learn(_domain(doc.sender), invoice.vendor)
