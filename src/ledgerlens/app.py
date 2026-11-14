@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ledgerlens.decide.policy import DEFAULT_REVIEW_THRESHOLD, Mode, decide
 from ledgerlens.domain.models import Finding
+from ledgerlens.ingest.convert import OCR
 from ledgerlens.ingest.extract import Extractor, extract
 from ledgerlens.ingest.mailbox import read_mailbox
 from ledgerlens.rules.detectors import detect
@@ -30,15 +31,17 @@ def run(
     threshold: Decimal = DEFAULT_REVIEW_THRESHOLD,
     as_of: date | None = None,
     extractor: Extractor = extract,
+    ocr: OCR | None = None,
 ) -> list[BatchResult]:
     """Process every batch not yet in memory. Findings already reported are not repeated.
 
     ``extractor`` turns documents into facts: the layout reader by default, or an LLM-backed
-    one. Detectors and the policy are the same either way."""
+    one. Detectors and the policy are the same either way. ``ocr`` reads scanned PDFs and
+    image attachments; without it they are skipped with a note."""
     path = state_dir / "memory.json"
     mem = Memory.load(path)
     results = []
-    for batch in read_mailbox(mailbox):
+    for batch in read_mailbox(mailbox, ocr):
         if batch.name in mem.batches:
             continue
         x = extractor(batch.documents, mem.vendor_domains)

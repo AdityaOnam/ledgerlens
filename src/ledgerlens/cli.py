@@ -1,8 +1,10 @@
 """ledgerlens audit <mailbox> [--mode supervised|autonomous] [--extractor auto|layout|llm]
+[--ocr auto|off]
 
 With --extractor auto (the default) documents the layout reader cannot parse are sent to Claude
 when ANTHROPIC_API_KEY is set and the optional `anthropic` package is installed; otherwise the
-layout reader works alone."""
+layout reader works alone. With --ocr auto (the default) scanned PDFs and images are read by
+Tesseract when it is installed; otherwise they are skipped with a note."""
 
 from __future__ import annotations
 
@@ -18,10 +20,22 @@ from pathlib import Path
 from ledgerlens.app import run
 from ledgerlens.decide.policy import DEFAULT_REVIEW_THRESHOLD, Mode
 from ledgerlens.domain.dates import parse_date
+from ledgerlens.ingest.convert import OCR, default_ocr
 from ledgerlens.ingest.extract import Extractor, extract
 from ledgerlens.report.render import write
 
 EXTRACTORS = ("auto", "layout", "llm")
+OCR_CHOICES = ("auto", "off")
+
+
+def choose_ocr(name: str) -> tuple[OCR | None, str]:
+    """The OCR engine for scanned attachments, with a one-line description for the console."""
+    if name == "off":
+        return None, "off"
+    engine = default_ocr()
+    if engine is None:
+        return None, 'unavailable (install Tesseract and "ledgerlens[ocr]")'
+    return engine, "Tesseract"
 
 
 def choose_extractor(
@@ -62,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--extractor", choices=EXTRACTORS, default="auto")
     a.add_argument("--model", default=None, help="Claude model for --extractor llm/auto")
     a.add_argument("--cache", type=Path, default=Path(".cache/llm"), help="model response cache")
+    a.add_argument("--ocr", choices=OCR_CHOICES, default="auto", help="read scans with Tesseract")
     args = p.parse_args(argv)
 
     if not args.mailbox.is_dir():
@@ -69,9 +84,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.reset and args.state.exists():
         shutil.rmtree(args.state)
     extractor, described = choose_extractor(args.extractor, args.cache, args.model)
-    print(f"Extractor: {described}")
+    ocr, ocr_described = choose_ocr(args.ocr)
+    print(f"Extractor: {described}; OCR: {ocr_described}")
     results = run(
-        args.mailbox, args.state, Mode(args.mode), args.threshold, args.as_of, extractor=extractor
+        args.mailbox,
+        args.state,
+        Mode(args.mode),
+        args.threshold,
+        args.as_of,
+        extractor=extractor,
+        ocr=ocr,
     )
     if not results:
         print("No new batches.")
