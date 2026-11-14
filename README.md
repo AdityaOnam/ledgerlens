@@ -29,6 +29,8 @@ Two behaviours cut across all of them:
 
 - **conflict**: two trusted sources disagree (e.g. order form vs. a later email); a person decides.
 - **cannot_determine**: the answer depends on a document Ledgerlens does not have; it says which one.
+  This includes invoices whose lines and credits do not add up to the printed total: a line may
+  have been lost in reading, or the vendor's total may be wrong, and the code will not guess which.
 
 ## Actions and safety
 
@@ -48,6 +50,26 @@ pip install -e ".[dev]"
 ledgerlens audit data/samples/acme --mode supervised
 pytest
 ```
+
+## What it reads
+
+Emails (`.eml`) and their attachments:
+
+| Attachment | How | Install |
+|---|---|---|
+| `.txt`, `.csv`, `.md` | as text | built in |
+| `.pdf` | the text layer of each page; pages without one are treated as scans | `pip install -e ".[pdf]"` |
+| `.xlsx`, `.xlsm` | every sheet as CSV, so a spreadsheet invoice reads like a CSV one | `pip install -e ".[xlsx]"` |
+| `.png`, `.jpg`, `.tif`, scanned PDF pages | OCR with Tesseract | `pip install -e ".[ocr]"` plus the [Tesseract](https://github.com/tesseract-ocr/tesseract) binary |
+
+Invoices are understood as CSV (`invoice_id,...` rows) or as a printed layout (`INVOICE <id>`,
+`Issued:` / `Due:` fields, a `| SKU | Description | Period | Qty | Unit price | Amount |` table
+and a `Total due:` line), which is what comes out of most PDFs and scans. Anything else can be
+read by Claude (below).
+
+`--ocr auto` (default) uses Tesseract when it is installed; `--ocr off` never does. A scan that
+cannot be read is skipped with a note in the report, never guessed at. Every invoice, however it
+was read, must add up: lines minus applied credits must equal the printed total.
 
 ## Reading free-form documents with Claude
 
@@ -82,7 +104,8 @@ quotes, and why the action policy decides what happens next, not the model.
 ```
 src/ledgerlens/
   domain/    money, dates, typed facts and findings
-  ingest/    mailbox reader, layout parser, LLM extractor, grounding check, cache
+  ingest/    mailbox reader, PDF/XLSX/OCR conversion, layout parser, LLM extractor,
+             grounding check, cache
   store/     on-disk memory of agreed terms, carried across batches
   rules/     one detector per finding class
   decide/    action policy (supervised / autonomous)
