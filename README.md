@@ -31,6 +31,41 @@ Two behaviours cut across all of them:
 - **cannot_determine**: the answer depends on a document Ledgerlens does not have; it says which one.
   This includes invoices whose lines and credits do not add up to the printed total: a line may
   have been lost in reading, or the vendor's total may be wrong, and the code will not guess which.
+  It also covers an overcharge from a vendor whose documents cite an order form or amendment that
+  was never received, and an invoice that follows terms agreed by someone without authority.
+
+## Which term wins
+
+A price can be stated by a signed amendment, by the signed order form it amends, or by an email
+in which the vendor and the customer agree it. They rank in that order:
+
+| Situation | Result |
+|---|---|
+| Amendment in force | Its price replaces the order form's, from its effective date |
+| Two amendments effective the same day, different prices | `conflict` |
+| Email agreed price, effective on or before the signed term in force | Superseded by the signed term |
+| Email agreed price, effective later, different from the signed term | `conflict`: the deal may never have been papered |
+| Email agreed price for a SKU no signed document covers | Governs on its own |
+
+A conflict is only reported when it costs money: if the invoice already bills the lowest
+price any source states, there is nothing to decide.
+
+**Who may agree terms.** Put an `authority.toml` at the top of the mailbox (or pass
+`--authority FILE`):
+
+```toml
+[[signatory]]
+name = "Priya Raman"
+email = "priya.raman@acme-robotics.com"
+```
+
+With it, an agreement binds only if its `Signed:` line names a listed signatory, and an emailed
+price binds only if the customer-side address on the email is listed. Unsigned agreements do
+not bind. Terms that do not bind are not used to price anything. If an invoice follows one
+anyway (say 60 seats on an amendment an engineering manager signed, when the binding terms allow
+50), the line is `cannot_determine` and the first signatory is asked to sign off. It is not
+disputed, because a colleague may really have agreed it. Without the file, no authority check is
+made, and the console says so.
 
 ## Actions and safety
 
@@ -92,8 +127,9 @@ ledgerlens audit data/samples/acme --extractor llm
 - Responses are cached in `.cache/llm` (change it with `--cache`), keyed by model, prompt
   and document. Re-running an audit makes no new calls.
 - The default model is `claude-sonnet-5-5` (change it with `--model`). Email statements
-  (cancellations, credit promises) are matched to a vendor by email domain, never by what the
-  model says.
+  (cancellations, credit promises, agreed prices) are matched to a vendor by email domain, and
+  who agreed a price is read from the email's addresses, never from what the model says. A
+  signatory the model reports but the document does not print is dropped.
 
 The grounding check proves that a quote is in the document. It cannot prove the document is
 honest: text planted in a document can still be quoted. That is why every finding shows its
@@ -107,7 +143,7 @@ src/ledgerlens/
   ingest/    mailbox reader, PDF/XLSX/OCR conversion, layout parser, LLM extractor,
              grounding check, cache
   store/     on-disk memory of agreed terms, carried across batches
-  rules/     one detector per finding class
+  rules/     one detector per finding class, term precedence, who may agree terms
   decide/    action policy (supervised / autonomous)
   report/    JSON and Markdown reports
 data/samples one synthetic mailbox per fictional company
