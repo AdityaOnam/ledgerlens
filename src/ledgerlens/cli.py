@@ -1,10 +1,12 @@
 """ledgerlens audit <mailbox> [--mode supervised|autonomous] [--extractor auto|layout|llm]
-[--ocr auto|off]
+[--ocr auto|off] [--authority FILE]
 
 With --extractor auto (the default) documents the layout reader cannot parse are sent to Claude
 when ANTHROPIC_API_KEY is set and the optional `anthropic` package is installed; otherwise the
 layout reader works alone. With --ocr auto (the default) scanned PDFs and images are read by
-Tesseract when it is installed; otherwise they are skipped with a note."""
+Tesseract when it is installed; otherwise they are skipped with a note. Who may agree terms is
+read from --authority, or from authority.toml at the top of the mailbox; without either, no
+authority check is made."""
 
 from __future__ import annotations
 
@@ -23,6 +25,7 @@ from ledgerlens.domain.dates import parse_date
 from ledgerlens.ingest.convert import OCR, default_ocr
 from ledgerlens.ingest.extract import Extractor, extract
 from ledgerlens.report.render import write
+from ledgerlens.rules.authority import Authority, AuthorityError, find
 
 EXTRACTORS = ("auto", "layout", "llm")
 OCR_CHOICES = ("auto", "off")
@@ -36,6 +39,18 @@ def choose_ocr(name: str) -> tuple[OCR | None, str]:
     if engine is None:
         return None, 'unavailable (install Tesseract and "ledgerlens[ocr]")'
     return engine, "Tesseract"
+
+
+def choose_authority(mailbox: Path, path: Path | None) -> tuple[Authority | None, str]:
+    """The authority list for a run, with a one-line description for the console.
+
+    Raises AuthorityError if the file is malformed and FileNotFoundError if an explicit
+    --authority file does not exist."""
+    path = path or find(mailbox)
+    if path is None:
+        return None, "not checked (no authority.toml)"
+    authority = Authority.load(path)
+    return authority, f"{len(authority.signatories)} signatory(ies) from {path}"
 
 
 def choose_extractor(
@@ -77,6 +92,9 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--model", default=None, help="Claude model for --extractor llm/auto")
     a.add_argument("--cache", type=Path, default=Path(".cache/llm"), help="model response cache")
     a.add_argument("--ocr", choices=OCR_CHOICES, default="auto", help="read scans with Tesseract")
+    a.add_argument(
+        "--authority", type=Path, default=None, help="who may agree terms (TOML; see README)"
+    )
     args = p.parse_args(argv)
 
     if not args.mailbox.is_dir():
@@ -85,7 +103,12 @@ def main(argv: list[str] | None = None) -> int:
         shutil.rmtree(args.state)
     extractor, described = choose_extractor(args.extractor, args.cache, args.model)
     ocr, ocr_described = choose_ocr(args.ocr)
+    try:
+        authority, auth_described = choose_authority(args.mailbox, args.authority)
+    except (OSError, AuthorityError) as exc:
+        p.error(f"authority file: {exc}")
     print(f"Extractor: {described}; OCR: {ocr_described}")
+    print(f"Authority: {auth_described}")
     results = run(
         args.mailbox,
         args.state,
@@ -94,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         args.as_of,
         extractor=extractor,
         ocr=ocr,
+        authority=authority,
     )
     if not results:
         print("No new batches.")

@@ -43,3 +43,25 @@ def test_cli_reports_which_extractor_ran(tmp_path, capsys):
     args = ["audit", str(SAMPLES), "--state", str(tmp_path / "s"), "--out", str(tmp_path / "o")]
     assert main(args) == 0
     assert "Extractor: layout reader (ANTHROPIC_API_KEY not set)" in capsys.readouterr().out
+
+
+def test_authority_file_is_found_next_to_the_mailbox(tmp_path):
+    from ledgerlens.cli import choose_authority
+
+    assert choose_authority(tmp_path, None) == (None, "not checked (no authority.toml)")
+    (tmp_path / "authority.toml").write_text(
+        '[[signatory]]\nname = "Ada"\nemail = "ada@acme.test"\n', encoding="utf-8"
+    )
+    authority, described = choose_authority(tmp_path, None)
+    assert authority.may_agree("ada@acme.test") and described.startswith("1 signatory(ies)")
+
+
+def test_bad_authority_file_is_a_clear_error(tmp_path, capsys):
+    bad = tmp_path / "auth.toml"
+    bad.write_text("[[signatory]]\nname = 'Ada'\n", encoding="utf-8")
+    box = tmp_path / "box"
+    box.mkdir()
+    for path in (bad, tmp_path / "missing.toml"):
+        with pytest.raises(SystemExit):
+            main(["audit", str(box), "--state", str(tmp_path / "s"), "--authority", str(path)])
+        assert "authority file:" in capsys.readouterr().err
