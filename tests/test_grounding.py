@@ -165,3 +165,54 @@ def test_schema_is_strict_everywhere():
             walk(node["items"])
 
     walk(SCHEMA)
+
+
+SIGNED = LETTER.replace("Best,", "Signed for Acme: Ada Finch, CFO\n\nBest,")
+
+
+def test_printed_signatory_is_kept():
+    x = facts_from_model(doc(SIGNED), agreement(signed_by="Ada Finch, CFO"), {})
+    assert x.agreements[0].signed_by == "Ada Finch, CFO" and x.unread == []
+
+
+def test_invented_signatory_leaves_the_agreement_unsigned():
+    x = facts_from_model(doc(LETTER), agreement(signed_by="Ada Finch, CFO"), {})
+    assert x.agreements[0].signed_by == ""
+    assert "dropped signatory 'Ada Finch'" in x.unread[0]
+
+
+def test_answer_without_signed_by_still_reads_as_unsigned():
+    data = agreement()
+    data["agreements"][0].pop("signed_by", None)
+    assert facts_from_model(doc(LETTER), data, {}).agreements[0].signed_by == ""
+
+
+PRICE_EMAIL = """Hi Ada, as discussed, from 1 July 2026 your editor seats drop to $19.75 a month.
+Rhea"""
+
+
+def test_emailed_price_is_grounded_and_agreed_by_the_customer_party():
+    data = {
+        "price_agreements": [
+            {
+                "sku": "QS-EDITOR",
+                "unit_price": "19.75",
+                "effective": "2026-07-01",
+                "quote": "from 1 July 2026 your editor seats drop to $19.75 a month",
+            }
+        ]
+    }
+    mail = Document("b/3", "email", "m", PRICE_EMAIL, date(2026, 6, 2), "rhea@quillstack.test",
+                    ("ada@acme.test",))  # fmt: skip
+    x = facts_from_model(mail, data, {"quillstack.test": "Quillstack"})
+    (p,) = x.prices
+    assert (p.vendor, p.sku, p.unit_price, p.effective, p.agreed_by) == (
+        "Quillstack",
+        "QS-EDITOR",
+        Decimal("19.75"),
+        date(2026, 7, 1),
+        "ada@acme.test",
+    )
+    data["price_agreements"][0]["unit_price"] = "15.00"
+    x = facts_from_model(mail, data, {"quillstack.test": "Quillstack"})
+    assert x.prices == [] and "amount 15.00 not in its quote" in x.unread[0]

@@ -30,10 +30,11 @@ from ledgerlens.domain.models import (
     Evidence,
     Invoice,
     InvoiceLine,
+    PriceStatement,
     PriceTerm,
 )
 from ledgerlens.domain.money import money, percent
-from ledgerlens.ingest.extract import Extraction, email_vendor
+from ledgerlens.ingest.extract import Extraction, customer_party, email_vendor
 from ledgerlens.ingest.mailbox import Document
 
 MIN_QUOTE = 8
@@ -74,6 +75,7 @@ SCHEMA: dict[str, Any] = _obj(
                     "true_up_allowed": _B,
                     "amends": _S,
                     "effective": _S,
+                    "signed_by": _S,
                     "quote": _S,
                     "prices": _arr(
                         _obj(
@@ -118,6 +120,7 @@ SCHEMA: dict[str, Any] = _obj(
         ),
         "cancellations": _arr(_obj({"sku": _S, "effective": _S, "quote": _S})),
         "credit_promises": _arr(_obj({"ref": _S, "amount": _S, "quote": _S})),
+        "price_agreements": _arr(_obj({"sku": _S, "unit_price": _S, "effective": _S, "quote": _S})),
         "references": _arr(
             _obj(
                 {
@@ -176,6 +179,18 @@ def _amount(doc: Document, quote: str, value: str, *must_contain: str) -> tuple[
     return amount, ev
 
 
+def _signatory(doc: Document, signed_by: str, notes: list[str]) -> str:
+    """The signatory, only if the document prints it; otherwise the agreement counts as
+    unsigned, which the authority check treats as not binding."""
+    name = signed_by.split(",")[0].strip()
+    if not name:
+        return ""
+    if name not in _norm(doc.text):
+        notes.append(f"{doc.doc_id}: dropped signatory {name!r}: not in the document")
+        return ""
+    return signed_by.strip()
+
+
 def _agreement(doc: Document, a: dict[str, Any], notes: list[str]) -> tuple[Agreement, str]:
     ev = _evidence(doc, a["quote"], a["agreement_id"])
     prices = []
@@ -201,6 +216,7 @@ def _agreement(doc: Document, a: dict[str, Any], notes: list[str]) -> tuple[Agre
         evidence=ev,
         amends=a["amends"] or None,
         effective=parse_date(effective) if effective else None,
+        signed_by=_signatory(doc, a.get("signed_by", ""), notes),
     )
     return agreement, domain
 
@@ -245,7 +261,7 @@ def facts_from_model(
 
     Statements in an email (cancellations, credit promises, references) are tied to a vendor by
     the email's domains, exactly as the layout reader does; the model's opinion of who the
-    vendor is is not used for them."""
+    vendor is is not used for them. Who agreed an emailed price is read from the addresses too."""
     out = Extraction()
     notes = out.unread
 
@@ -277,6 +293,7 @@ def facts_from_model(
     statements = [
         *data.get("cancellations", []),
         *data.get("credit_promises", []),
+        *data.get("price_agreements", []),
         *data.get("references", []),
     ]
     vendor = email_vendor(doc, {**vendor_domains, **out.vendor_domains})
@@ -305,6 +322,16 @@ def facts_from_model(
         made = attempt(f"credit {c.get('ref', '?')}", promise)
         if made:
             out.credits.append(made)
+    for c in data.get("price_agreements", []):
+
+        def agreed(c: dict[str, Any] = c) -> PriceStatement:
+            amount, ev = _amount(doc, c["quote"], c["unit_price"])
+            party = customer_party(doc, {**vendor_domains, **out.vendor_domains})
+            return PriceStatement(vendor, c["sku"], amount, parse_date(c["effective"]), party, ev)
+
+        made = attempt(f"price for {c.get('sku', '?')}", agreed)
+        if made:
+            out.prices.append(made)
     parties = (doc.sender, *doc.recipients)
     known = {**vendor_domains, **out.vendor_domains}
     holder = next((p for p in parties if p.split("@")[-1].lower() in known), doc.sender)
