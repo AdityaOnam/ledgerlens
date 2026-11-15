@@ -42,7 +42,9 @@ def test_llm_with_key_and_sdk_builds_the_extractor_without_calling(tmp_path):
 def test_cli_reports_which_extractor_ran(tmp_path, capsys):
     args = ["audit", str(SAMPLES), "--state", str(tmp_path / "s"), "--out", str(tmp_path / "o")]
     assert main(args) == 0
-    assert "Extractor: layout reader (ANTHROPIC_API_KEY not set)" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Extractor: layout reader (ANTHROPIC_API_KEY not set)" in out
+    assert "Authority: 1 signatory(ies) from" in out and "authority.toml" in out
 
 
 def test_authority_file_is_found_next_to_the_mailbox(tmp_path):

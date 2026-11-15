@@ -1,7 +1,8 @@
 """Write the sample mailbox for Acme Robotics (invented) to data/samples/acme.
 
-Two batches of .eml files. Each planted problem is listed in data/samples/acme/EXPECTED.md,
-together with the decoys that look wrong but are fine.
+Three batches of .eml files, plus authority.toml (who at Acme may agree terms). Each planted
+problem is listed in data/samples/acme/EXPECTED.md, together with the decoys that look wrong
+but are fine.
 
     python scripts/make_samples.py
 """
@@ -16,7 +17,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "data" / "samples" / "acme"
 PRIYA = "Priya Raman <priya.raman@acme-robotics.com>"
+DEV = "Dev Malhotra <dev.malhotra@acme-robotics.com>"
 AP = "AP Team <ap@acme-robotics.com>"
+FINANCE = "Priya Raman, VP Finance"
+
+AUTHORITY = """# Who at Acme Robotics may agree prices and sign contracts with vendors (invented).
+[[signatory]]
+name = "Priya Raman"
+email = "priya.raman@acme-robotics.com"
+"""
 
 
 def order_form(
@@ -54,7 +63,14 @@ def order_form(
 
 
 def amendment(
-    ref: str, base: str, vendor: str, contact: str, effective: str, end: str, rows: list[tuple]
+    ref: str,
+    base: str,
+    vendor: str,
+    contact: str,
+    effective: str,
+    end: str,
+    rows: list[tuple],
+    signed: str = FINANCE,
 ) -> str:
     lines = [
         f"AMENDMENT {ref} to {base}",
@@ -62,7 +78,7 @@ def amendment(
         f"Vendor contact: {contact}",
         f"Effective: {effective}",
         f"Term end: {end}",
-        "Signed: Priya Raman, VP Finance",
+        f"Signed: {signed}",
         "",
         "| SKU | Description | Unit price (USD / month) | Quantity |",
     ]
@@ -115,6 +131,7 @@ BD = ("Brightdesk Inc.", "accounts@brightdesk.io", "Brightdesk Billing <billing@
 CK = ("Cloudkeep Ltd.", "sales@cloudkeep.com", "Cloudkeep Support <support@cloudkeep.com>")
 PW = ("Pagewise", "team@pagewise.app", "Pagewise Billing <billing@pagewise.app>")
 FX = ("Fluxmetrics", "ar@fluxmetrics.io", "Fluxmetrics AR <ar@fluxmetrics.io>")
+TH = ("Tallyhub", "accounts@tallyhub.co", "Tallyhub Billing <billing@tallyhub.co>")
 
 
 def batch_01() -> None:
@@ -532,11 +549,207 @@ def batch_02() -> None:
     )
 
 
+def batch_03() -> None:
+    """Several sources on one price: precedence, authority and a document never received."""
+    b = "batch_03"
+    mail(
+        b,
+        "201_tallyhub_order_form",
+        "2026-07-25T10:00:00",
+        TH[2],
+        PRIYA,
+        "Tallyhub order form OF-2026-071",
+        "Countersigned copy attached.\n",
+        {
+            "OF-2026-071.txt": order_form(
+                "OF-2026-071",
+                TH[0],
+                TH[1],
+                "2026-08-01",
+                "2027-07-31",
+                "no",
+                30,
+                None,
+                "not permitted",
+                [("TH-SEAT", "Tallyhub seat", "20.00", 30)],
+            )
+        },
+    )
+    # Superseded: a signed amendment takes effect after this email and sets its own price.
+    mail(
+        b,
+        "202_tallyhub_price_email",
+        "2026-08-20T14:00:00",
+        TH[2],
+        PRIYA,
+        "Seat price",
+        "Hi Priya,\n\nAs discussed on our call, the price for TH-SEAT will be $18.00 per seat "
+        "effective 2026-09-01.\n\nTallyhub Accounts\n",
+    )
+    mail(
+        b,
+        "203_tallyhub_amendment",
+        "2026-09-25T10:00:00",
+        TH[2],
+        PRIYA,
+        "Amendment AM-2026-08",
+        "Signed amendment attached.\n",
+        {
+            "AM-2026-08.txt": amendment(
+                "AM-2026-08",
+                "OF-2026-071",
+                TH[0],
+                TH[1],
+                "2026-10-01",
+                "2027-07-31",
+                [("TH-SEAT", "Tallyhub seat", "19.00", 30)],
+            )
+        },
+    )
+    # A later email disagrees with the signed order form: a conflict for a person.
+    mail(
+        b,
+        "204_cloudkeep_price_email",
+        "2026-09-20T11:00:00",
+        CK[2],
+        PRIYA,
+        "Storage pricing",
+        "Hi Priya,\n\nFollowing our call, the price for CK-STORE-TB will be $19.50 per TB "
+        "effective 2026-10-01.\n\nCloudkeep Sales\n",
+    )
+    # Signed by someone who may not agree terms.
+    mail(
+        b,
+        "205_pagewise_amendment",
+        "2026-09-28T09:00:00",
+        PW[2],
+        DEV,
+        "Amendment AM-2026-06",
+        "Signed amendment for the extra seats attached.\n",
+        {
+            "AM-2026-06.txt": amendment(
+                "AM-2026-06",
+                "OF-2025-090",
+                PW[0],
+                PW[1],
+                "2026-10-01",
+                "2027-03-31",
+                [("PW-TEAM", "Pagewise Team seat", "13.00", 60)],
+                signed="Dev Malhotra, Engineering Manager",
+            )
+        },
+    )
+    mail(
+        b,
+        "206_pagewise_oct",
+        "2026-10-01T08:00:00",
+        PW[2],
+        AP,
+        "Invoice INV-PW-120",
+        "Invoice attached.\n",
+        {
+            "INV-PW-120.csv": invoice(
+                "INV-PW-120",
+                PW[0],
+                "2026-10-01",
+                "2026-10-31",
+                [("PW-TEAM", "Team seat", "2026-10-01", "2026-10-31", 60, "13.00", "780.00")],
+            )
+        },
+    )
+    mail(
+        b,
+        "207_cloudkeep_oct",
+        "2026-10-02T08:00:00",
+        CK[2],
+        AP,
+        "Invoice INV-CK-402",
+        "Invoice attached.\n",
+        {
+            "INV-CK-402.csv": invoice(
+                "INV-CK-402",
+                CK[0],
+                "2026-10-02",
+                "2026-11-01",
+                [
+                    (
+                        "CK-STORE-TB",
+                        "Backup storage",
+                        "2026-10-01",
+                        "2026-10-31",
+                        40,
+                        "21.50",
+                        "860.00",
+                    )
+                ],
+            )
+        },
+    )
+    # Decoy: billed at the amended $19.00, which supersedes the earlier $18.00 email.
+    mail(
+        b,
+        "208_tallyhub_oct",
+        "2026-10-01T08:30:00",
+        TH[2],
+        AP,
+        "Invoice INV-TH-210",
+        "Invoice attached.\n",
+        {
+            "INV-TH-210.csv": invoice(
+                "INV-TH-210",
+                TH[0],
+                "2026-10-01",
+                "2026-10-31",
+                [("TH-SEAT", "Seat", "2026-10-01", "2026-10-31", 30, "19.00", "570.00")],
+            )
+        },
+    )
+    mail(
+        b,
+        "209_tallyhub_notice",
+        "2026-10-28T09:00:00",
+        TH[2],
+        PRIYA,
+        "November invoice",
+        "Hi Priya, your November invoice reflects amendment AM-2026-11, which adds reporting to "
+        "every seat.\n",
+    )
+    mail(
+        b,
+        "210_tallyhub_nov",
+        "2026-11-01T08:30:00",
+        TH[2],
+        AP,
+        "Invoice INV-TH-233",
+        "Invoice attached.\n",
+        {
+            "INV-TH-233.csv": invoice(
+                "INV-TH-233",
+                TH[0],
+                "2026-11-01",
+                "2026-11-30",
+                [("TH-SEAT", "Seat", "2026-11-01", "2026-11-30", 30, "22.00", "660.00")],
+            )
+        },
+    )
+    mail(
+        b,
+        "211_ap_status",
+        "2026-11-10T09:00:00",
+        AP,
+        PRIYA,
+        "AP status",
+        "Monthly AP status: all vendor invoices through November are entered.\n",
+    )
+
+
 def main() -> None:
     for folder in ROOT.glob("batch_*"):  # keep EXPECTED.md and anything else hand-written
         shutil.rmtree(folder)
     batch_01()
     batch_02()
+    batch_03()
+    (ROOT / "authority.toml").write_text(AUTHORITY, encoding="utf-8", newline="\n")
     print(f"wrote {sum(1 for _ in ROOT.rglob('*.eml'))} emails to {ROOT}")
 
 

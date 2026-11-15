@@ -1,0 +1,28 @@
+From: Tallyhub Billing <billing@tallyhub.co>
+To: AP Team <ap@acme-robotics.com>
+Subject: Invoice INV-TH-233
+Date: Sun, 01 Nov 2026 08:30:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==ledgerlens-210_tallyhub_nov=="
+
+--==ledgerlens-210_tallyhub_nov==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Invoice attached.
+
+--==ledgerlens-210_tallyhub_nov==
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="INV-TH-233.csv"
+MIME-Version: 1.0
+
+invoice_id,INV-TH-233
+vendor,Tallyhub
+issued,2026-11-01
+due,2026-11-30
+total,660.00
+line,sku,description,period_start,period_end,qty,unit_price,amount
+line,TH-SEAT,Seat,2026-11-01,2026-11-30,30,22.00,660.00
+
+--==ledgerlens-210_tallyhub_nov==--

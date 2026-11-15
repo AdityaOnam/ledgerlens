@@ -1,0 +1,35 @@
+From: Tallyhub Billing <billing@tallyhub.co>
+To: Priya Raman <priya.raman@acme-robotics.com>
+Subject: Tallyhub order form OF-2026-071
+Date: Sat, 25 Jul 2026 10:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+ boundary="==ledgerlens-201_tallyhub_order_form=="
+
+--==ledgerlens-201_tallyhub_order_form==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Countersigned copy attached.
+
+--==ledgerlens-201_tallyhub_order_form==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="OF-2026-071.txt"
+MIME-Version: 1.0
+
+ORDER FORM OF-2026-071
+Vendor: Tallyhub
+Customer: Acme Robotics Ltd.
+Vendor contact: accounts@tallyhub.co
+Term start: 2026-08-01
+Term end: 2027-07-31
+Auto-renewal: no
+Notice period: 30 days
+True-up: not permitted
+Signed: Priya Raman, VP Finance
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| TH-SEAT | Tallyhub seat | 20.00 | 30 |
+
+--==ledgerlens-201_tallyhub_order_form==--

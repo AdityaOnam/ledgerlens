@@ -27,3 +27,20 @@ Not yet due: Cloudkeep's SLA credit was promised 2026-02-10 (grace period 60 day
 | renewal_notice_due | Brightdesk Inc. | OF-2025-311 | 54,720.00 | Auto-renews 2026-12-01, notice due 2026-10-01; value excludes cancelled Analytics |
 
 Decoy: INV-BD-1102 bills 120 Pro seats at $38.00 and no Analytics, which is all correct.
+
+## batch_03 (as of 2026-11-10)
+
+Run with `authority.toml` (Priya Raman is the only signatory), which the CLI picks up from the
+mailbox folder.
+
+| Class | Vendor | Invoice / ref | Amount | Why |
+|---|---|---|---|---|
+| conflict | Cloudkeep Ltd. | INV-CK-402 | 80.00 | Signed order form says $21.50; a later email agreed $19.50 from 2026-10-01 |
+| cannot_determine | Pagewise | INV-PW-120 | 150.00 | Billed 60 seats at $13.00 per AM-2026-06, signed by Dev Malhotra, who may not agree terms; the binding terms allow 50 at $12.60 |
+| cannot_determine | Tallyhub | INV-TH-233 | 90.00 | Billed $22.00 against the amended $19.00; amendment AM-2026-11 is cited but was never received |
+
+Decoy: INV-TH-210 bills $19.00, the price of signed amendment AM-2026-08, which supersedes the
+$18.00 agreed by email before it took effect.
+
+Without `authority.toml`, AM-2026-06 binds and INV-PW-120 is within its renewal cap, so batch_03
+has two findings.

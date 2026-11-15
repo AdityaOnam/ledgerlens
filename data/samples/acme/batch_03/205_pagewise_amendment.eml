@@ -1,0 +1,31 @@
+From: Pagewise Billing <billing@pagewise.app>
+To: Dev Malhotra <dev.malhotra@acme-robotics.com>
+Subject: Amendment AM-2026-06
+Date: Mon, 28 Sep 2026 09:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+ boundary="==ledgerlens-205_pagewise_amendment=="
+
+--==ledgerlens-205_pagewise_amendment==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Signed amendment for the extra seats attached.
+
+--==ledgerlens-205_pagewise_amendment==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="AM-2026-06.txt"
+MIME-Version: 1.0
+
+AMENDMENT AM-2026-06 to OF-2025-090
+Vendor: Pagewise
+Vendor contact: team@pagewise.app
+Effective: 2026-10-01
+Term end: 2027-03-31
+Signed: Dev Malhotra, Engineering Manager
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| PW-TEAM | Pagewise Team seat | 13.00 | 60 |
+
+--==ledgerlens-205_pagewise_amendment==--

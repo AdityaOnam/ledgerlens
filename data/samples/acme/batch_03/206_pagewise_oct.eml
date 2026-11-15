@@ -1,0 +1,28 @@
+From: Pagewise Billing <billing@pagewise.app>
+To: AP Team <ap@acme-robotics.com>
+Subject: Invoice INV-PW-120
+Date: Thu, 01 Oct 2026 08:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==ledgerlens-206_pagewise_oct=="
+
+--==ledgerlens-206_pagewise_oct==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Invoice attached.
+
+--==ledgerlens-206_pagewise_oct==
+Content-Type: text/csv; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="INV-PW-120.csv"
+MIME-Version: 1.0
+
+invoice_id,INV-PW-120
+vendor,Pagewise
+issued,2026-10-01
+due,2026-10-31
+total,780.00
+line,sku,description,period_start,period_end,qty,unit_price,amount
+line,PW-TEAM,Team seat,2026-10-01,2026-10-31,60,13.00,780.00
+
+--==ledgerlens-206_pagewise_oct==--

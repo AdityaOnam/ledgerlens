@@ -74,7 +74,7 @@ def test_unrecognised_attachment_is_reported_not_dropped():
 
 def test_sample_mailbox_reads_cleanly():
     batches = read_mailbox(SAMPLES)
-    assert [b.name for b in batches] == ["batch_01", "batch_02"]
+    assert [b.name for b in batches] == ["batch_01", "batch_02", "batch_03"]
     for b in batches:
         assert extract(b.documents, {}).unread == []
 

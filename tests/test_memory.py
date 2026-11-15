@@ -17,7 +17,12 @@ def test_round_trip_is_lossless(tmp_path):
     assert again.agreements == mem.agreements
     assert again.invoices == mem.invoices
     assert again.credits == mem.credits
-    assert again.batches == ["batch_01", "batch_02"]
+    assert again.prices == mem.prices and len(again.prices) == 2
+    assert {a.signed_by for a in again.agreements} == {
+        "Priya Raman, VP Finance",
+        "Dev Malhotra, Engineering Manager",
+    }
+    assert again.batches == ["batch_01", "batch_02", "batch_03"]
 
 
 def test_absorbing_the_same_batch_twice_adds_nothing():

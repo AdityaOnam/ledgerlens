@@ -1,0 +1,31 @@
+From: Tallyhub Billing <billing@tallyhub.co>
+To: Priya Raman <priya.raman@acme-robotics.com>
+Subject: Amendment AM-2026-08
+Date: Fri, 25 Sep 2026 10:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+ boundary="==ledgerlens-203_tallyhub_amendment=="
+
+--==ledgerlens-203_tallyhub_amendment==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Signed amendment attached.
+
+--==ledgerlens-203_tallyhub_amendment==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="AM-2026-08.txt"
+MIME-Version: 1.0
+
+AMENDMENT AM-2026-08 to OF-2026-071
+Vendor: Tallyhub
+Vendor contact: accounts@tallyhub.co
+Effective: 2026-10-01
+Term end: 2027-07-31
+Signed: Priya Raman, VP Finance
+
+| SKU | Description | Unit price (USD / month) | Quantity |
+| TH-SEAT | Tallyhub seat | 19.00 | 30 |
+
+--==ledgerlens-203_tallyhub_amendment==--
