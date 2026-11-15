@@ -26,3 +26,20 @@ def test_absorbing_the_same_batch_twice_adds_nothing():
     for _ in range(2):
         mem.absorb(batch.name, extract(batch.documents, mem.vendor_domains))
     assert len(mem.invoices) == 4 and mem.batches == ["batch_01"]
+
+
+def test_state_saved_before_signatures_and_email_prices_still_loads(tmp_path):
+    import json
+
+    mem = Memory()
+    batch = read_mailbox(SAMPLES)[0]
+    mem.absorb(batch.name, extract(batch.documents, {}))
+    path = tmp_path / "memory.json"
+    mem.save(path)
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw.pop("prices")
+    for a in raw["agreements"]:
+        a.pop("signed_by")
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    old = Memory.load(path)
+    assert old.prices == [] and {a.signed_by for a in old.agreements} == {""}

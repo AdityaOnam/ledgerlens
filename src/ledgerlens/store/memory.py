@@ -16,6 +16,7 @@ from ledgerlens.domain.models import (
     CreditPromise,
     DocumentReference,
     Invoice,
+    PriceStatement,
 )
 from ledgerlens.ingest.extract import Extraction
 from ledgerlens.store.codec import decode, encode
@@ -26,6 +27,7 @@ FACT_TYPES = {
     "cancellations": Cancellation,
     "credits": CreditPromise,
     "references": DocumentReference,
+    "prices": PriceStatement,
 }
 
 
@@ -36,6 +38,7 @@ class Memory:
     cancellations: list[Cancellation] = field(default_factory=list)
     credits: list[CreditPromise] = field(default_factory=list)
     references: list[DocumentReference] = field(default_factory=list)
+    prices: list[PriceStatement] = field(default_factory=list)  # prices agreed by email
     vendor_domains: dict[str, str] = field(default_factory=dict)
     batches: list[str] = field(default_factory=list)
     reported: dict[str, str] = field(default_factory=dict)  # finding key -> batch first reported

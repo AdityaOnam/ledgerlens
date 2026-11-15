@@ -47,6 +47,7 @@ class Agreement:
     evidence: Evidence
     amends: str | None = None
     effective: date | None = None
+    signed_by: str = ""  # the customer's signatory as printed, e.g. "Priya Raman, VP Finance"
 
     def term_for(self, sku: str) -> PriceTerm | None:
         return next((p for p in self.prices if p.sku == sku), None)
@@ -58,6 +59,21 @@ class Cancellation:
     sku: str
     effective: date
     requested_by: str
+    evidence: Evidence
+
+
+@dataclass(frozen=True)
+class PriceStatement:
+    """A unit price agreed in an email rather than in a signed document.
+
+    ``agreed_by`` is the customer-side address on the email: the sender if the customer wrote
+    it, otherwise the customer recipient the vendor was writing to."""
+
+    vendor: str
+    sku: str
+    unit_price: Decimal
+    effective: date
+    agreed_by: str
     evidence: Evidence
 
 

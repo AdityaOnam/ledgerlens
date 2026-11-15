@@ -26,6 +26,7 @@ from ledgerlens.domain.models import (
     Evidence,
     Invoice,
     InvoiceLine,
+    PriceStatement,
     PriceTerm,
 )
 from ledgerlens.domain.money import money, percent
@@ -36,6 +37,9 @@ DATE = r"\d{4}-\d{2}-\d{2}|\d{1,2} [A-Z][a-z]+ \d{4}|[A-Z][a-z]+ \d{1,2}, \d{4}"
 DOC_REF = r"(?:OF|AM)-\d{4}-\d+"
 
 
+FACT_LISTS = ("agreements", "invoices", "cancellations", "credits", "references", "prices")
+
+
 @dataclass
 class Extraction:
     agreements: list[Agreement] = field(default_factory=list)
@@ -43,19 +47,18 @@ class Extraction:
     cancellations: list[Cancellation] = field(default_factory=list)
     credits: list[CreditPromise] = field(default_factory=list)
     references: list[DocumentReference] = field(default_factory=list)
+    prices: list[PriceStatement] = field(default_factory=list)
     vendor_domains: dict[str, str] = field(default_factory=dict)
     unread: list[str] = field(default_factory=list)
 
     def extend(self, other: Extraction) -> None:
-        for name in ("agreements", "invoices", "cancellations", "credits", "references", "unread"):
+        for name in FACT_LISTS + ("unread",):
             getattr(self, name).extend(getattr(other, name))
         self.vendor_domains.update(other.vendor_domains)
 
     @property
     def empty(self) -> bool:
-        return not any(
-            (self.agreements, self.invoices, self.cancellations, self.credits, self.references)
-        )
+        return not any(getattr(self, name) for name in FACT_LISTS)
 
 
 # Reads one document the layout did not understand; None means "not read either".
@@ -124,6 +127,7 @@ def extract_agreement(doc: Document) -> tuple[Agreement, str] | None:
         evidence=Evidence(doc.doc_id, head.group(0)),
         amends=head.group(3),
         effective=parse_date(effective) if effective else None,
+        signed_by=val("signed", "") or "",
     ), domain
 
 
@@ -239,6 +243,12 @@ _CANCEL = re.compile(
 _CREDIT = re.compile(
     r"[^.\n]*\bcredit of\s+\$?([\d,]+\.\d{2})[^.\n]*?\(ref\s+([A-Z0-9-]+)\)[^.\n]*", re.I
 )
+# "the price for BD-PRO will be $34.00 per seat effective 2026-08-01"
+_PRICE = re.compile(
+    rf"[^.\n]*\b(?:price|rate)\b[^.\n]*?\b({SKU})\b[^.\n]*?\$([\d,]+\.\d{{2}})"
+    rf"[^.\n]*?\beffective\s+({DATE})[^.\n]*",
+    re.I,
+)
 _REF = re.compile(rf"[^.\n]*\b(order form|amendment)\s+({DOC_REF})\b[^.\n]*", re.I)
 
 
@@ -256,6 +266,13 @@ def email_vendor(doc: Document, vendor_domains: dict[str, str]) -> str | None:
         ),
         None,
     )
+
+
+def customer_party(doc: Document, vendor_domains: dict[str, str]) -> str:
+    """The customer-side address on an email: the sender, unless the sender is the vendor."""
+    if _domain(doc.sender) not in vendor_domains:
+        return doc.sender
+    return next((a for a in doc.recipients if _domain(a) not in vendor_domains), doc.sender)
 
 
 def extract_email(doc: Document, vendor_domains: dict[str, str]) -> Extraction:
@@ -281,6 +298,17 @@ def extract_email(doc: Document, vendor_domains: dict[str, str]) -> Extraction:
                 m.group(2),
                 money(m.group(1)),
                 doc.sent,
+                Evidence(doc.doc_id, m.group(0).strip()),
+            )
+        )
+    for m in _PRICE.finditer(doc.text):
+        out.prices.append(
+            PriceStatement(
+                vendor,
+                m.group(1),
+                money(m.group(2)),
+                parse_date(m.group(3)),
+                customer_party(doc, vendor_domains),
                 Evidence(doc.doc_id, m.group(0).strip()),
             )
         )

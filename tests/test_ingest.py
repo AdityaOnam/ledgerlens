@@ -109,3 +109,50 @@ def test_fallback_only_sees_known_vendor_emails_without_stock_sentences():
     x = extract([stock, prose, stranger], known, fallback=fallback)
     assert seen == ["Let's drop analytics from next month."]
     assert len(x.cancellations) == 1
+
+
+def test_signatory_is_read_from_the_signed_line():
+    signed = ORDER.replace(
+        "True-up: not permitted", "True-up: not permitted\nSigned: Priya Raman, VP Finance"
+    )
+    agreement, _ = extract_agreement(doc(signed))
+    assert agreement.signed_by == "Priya Raman, VP Finance"
+    assert extract_agreement(doc(ORDER))[0].signed_by == ""
+
+
+def test_price_agreed_by_email_names_the_customer_party():
+    body = (
+        "Hi Priya,\n\nFollowing our call, the price for BD-PRO will be $34.00 per seat "
+        "effective 2026-08-01. Everything else stays the same.\n"
+    )
+    x = extract_email(
+        doc(body, kind="email", to=("priya@acme.test",)), {"brightdesk.io": "Brightdesk Inc."}
+    )
+    (p,) = x.prices
+    assert (p.vendor, p.sku, str(p.unit_price), p.effective) == (
+        "Brightdesk Inc.",
+        "BD-PRO",
+        "34.00",
+        date(2026, 8, 1),
+    )
+    assert p.agreed_by == "priya@acme.test"
+    assert p.evidence.quote.endswith("effective 2026-08-01")
+    assert not x.empty
+
+
+def test_customer_written_price_email_is_agreed_by_the_sender():
+    body = "Confirming the new rate for BD-PRO of $34.00 per seat, effective 2026-08-01.\n"
+    x = extract_email(
+        doc(body, kind="email", sender="dev@acme.test", to=("billing@brightdesk.io",)),
+        {"brightdesk.io": "Brightdesk Inc."},
+    )
+    assert [p.agreed_by for p in x.prices] == ["dev@acme.test"]
+
+
+def test_cancellation_and_credit_sentences_are_not_prices():
+    body = (
+        "Please cancel BD-ANALYTICS effective 2026-02-01.\n"
+        "We will apply a service credit of $350.00 to your next invoice (ref SLA-2026-02).\n"
+    )
+    x = extract_email(doc(body, kind="email"), {"brightdesk.io": "Brightdesk Inc."})
+    assert x.prices == [] and len(x.cancellations) == 1 and len(x.credits) == 1
