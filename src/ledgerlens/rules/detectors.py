@@ -1,7 +1,8 @@
 """One detector per finding class. Each reads facts from Memory and returns Findings.
 
 Line checks run in a fixed order and stop at the first that explains the whole line, so one
-dollar is never claimed twice: cancelled > duplicate > conflict / unknown > price > seats.
+dollar is never claimed twice: cancelled > duplicate > no agreement > relies on an unauthorised
+term > not priced > conflict > cites a missing document > price > seats.
 """
 
 from __future__ import annotations
@@ -10,9 +11,23 @@ from collections.abc import Iterator
 from datetime import date, timedelta
 from decimal import Decimal
 
-from ledgerlens.domain.models import Finding, FindingClass, Invoice, InvoiceLine
+from ledgerlens.domain.models import (
+    DocumentReference,
+    Finding,
+    FindingClass,
+    Invoice,
+    InvoiceLine,
+)
 from ledgerlens.domain.money import money
-from ledgerlens.rules.terms import current_term_end, resolve
+from ledgerlens.rules.authority import Authority
+from ledgerlens.rules.terms import (
+    EMAIL,
+    SAME_DAY_AMENDMENTS,
+    Resolved,
+    Term,
+    current_term_end,
+    resolve,
+)
 from ledgerlens.store.memory import Memory
 
 CREDIT_GRACE_DAYS = 60
@@ -48,11 +63,51 @@ def _finding(
     )
 
 
+def _over(line: InvoiceLine, r: Resolved) -> Decimal:
+    """How much of a line the binding terms do not cover: price above the agreed price plus
+    seats above the licence (unless true-up is allowed). Everything, if nothing binds."""
+    qty = line.qty
+    if r.licensed_qty is not None and not r.true_up_allowed:
+        qty = min(qty, r.licensed_qty)
+    unit = line.unit_price if r.price is None else min(line.unit_price, r.price)
+    if r.status == "none":
+        unit, qty = Decimal(0), 0
+    return money(line.unit_price * line.qty - unit * qty)
+
+
+def _relies_on(line: InvoiceLine, t: Term, r: Resolved) -> bool:
+    """True if a line follows an unauthorised term where it departs from the binding ones."""
+    price = t.price == line.unit_price and (r.price is None or line.unit_price > r.price)
+    seats = (
+        t.qty is not None
+        and r.licensed_qty is not None
+        and not r.true_up_allowed
+        and r.licensed_qty < line.qty <= t.qty
+    )
+    return (price or seats) and _over(line, r) > 0
+
+
+def _conflict_summary(sku: str, r: Resolved) -> str:
+    if r.reason == SAME_DAY_AMENDMENTS:
+        return f"Agreements effective the same day disagree on {sku}: " + " vs ".join(
+            f"${t.price}" for t in r.candidates
+        )
+    return f"Sources disagree on the price of {sku}: " + " vs ".join(
+        f"{t.label} says ${t.price}" for t in r.candidates
+    )
+
+
+def _missing_documents(mem: Memory, vendor: str) -> list[DocumentReference]:
+    """Order forms and amendments a vendor's documents cite that are not on file."""
+    have = {a.agreement_id for a in mem.agreements}
+    return [x for x in mem.references if x.vendor == vendor and x.ref not in have]
+
+
 def _ordered(invoices: list[Invoice]) -> list[Invoice]:
     return sorted(invoices, key=lambda i: (i.issued, i.invoice_id))
 
 
-def check_lines(mem: Memory) -> Iterator[Finding]:
+def check_lines(mem: Memory, authority: Authority | None = None) -> Iterator[Finding]:
     billed_before: dict[tuple[str, str, date, date], Invoice] = {}
     unknown_vendor_reported: set[str] = set()
     for inv in _ordered(mem.invoices):
@@ -125,7 +180,28 @@ def check_lines(mem: Memory) -> Iterator[Finding]:
                 )
                 continue
 
-            r = resolve(mem.agreements, inv.vendor, line.sku, line.period_start)
+            r = resolve(
+                mem.agreements, inv.vendor, line.sku, line.period_start, mem.prices, authority
+            )
+            relied_on = next((t for t in r.unauthorised if _relies_on(line, t, r)), None)
+            if relied_on and r.status != "conflict":
+                signed = relied_on.source != EMAIL
+                yield _finding(
+                    C.CANNOT_DETERMINE,
+                    inv,
+                    line,
+                    _over(line, r),
+                    f"{line.sku} billed at ${line.unit_price} x {line.qty} as in "
+                    f"{relied_on.label}, which {relied_on.party or 'nobody'} "
+                    f"{'signed' if signed else 'agreed'} without authority to agree terms",
+                    "term_agreed_without_authority",
+                    [relied_on.evidence, *r.evidence],
+                    missing=f"sign-off on {relied_on.label} by an authorised signatory",
+                    holder=authority.contact if authority else "",
+                    ref=relied_on.ref,
+                    agreed_by=relied_on.party,
+                )
+                continue
             if r.status == "none":
                 yield _finding(
                     C.CANNOT_DETERMINE,
@@ -140,17 +216,36 @@ def check_lines(mem: Memory) -> Iterator[Finding]:
                 )
                 continue
             if r.status == "conflict":
-                low = min(p for p, _ in r.candidates)
+                low = min(t.price for t in r.candidates)
+                if line.unit_price > low:
+                    yield _finding(
+                        C.CONFLICT,
+                        inv,
+                        line,
+                        (line.unit_price - low) * line.qty,
+                        _conflict_summary(line.sku, r),
+                        r.reason,
+                        [t.evidence for t in r.candidates],
+                        candidates=[str(t.price) for t in r.candidates],
+                        sources=[t.label for t in r.candidates],
+                    )
+                continue
+            missing = _missing_documents(mem, inv.vendor)
+            if missing and _over(line, r) > 0:
+                ref = missing[0]
                 yield _finding(
-                    C.CONFLICT,
+                    C.CANNOT_DETERMINE,
                     inv,
                     line,
-                    (line.unit_price - low) * line.qty,
-                    f"Agreements effective the same day disagree on {line.sku}: "
-                    + " vs ".join(f"${p}" for p, _ in r.candidates),
-                    "same_day_amendments_disagree",
-                    [e for _, e in r.candidates],
-                    candidates=[str(p) for p, _ in r.candidates],
+                    _over(line, r),
+                    f"{line.sku} billed at ${line.unit_price} x {line.qty}, more than the terms "
+                    f"on file allow; {ref.kind} {ref.ref} is cited but was never received and "
+                    "may change them",
+                    "cited_document_missing",
+                    [*r.evidence, ref.evidence],
+                    missing=ref.ref,
+                    holder=ref.holder,
+                    ref=ref.ref,
                 )
                 continue
 
@@ -277,9 +372,9 @@ def check_totals(mem: Memory) -> Iterator[Finding]:
         )
 
 
-def detect(mem: Memory, as_of: date) -> list[Finding]:
+def detect(mem: Memory, as_of: date, authority: Authority | None = None) -> list[Finding]:
     return [
-        *check_lines(mem),
+        *check_lines(mem, authority),
         *check_totals(mem),
         *check_credits(mem, as_of),
         *check_renewals(mem, as_of),
