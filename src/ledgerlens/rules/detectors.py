@@ -3,6 +3,9 @@
 Line checks run in a fixed order and stop at the first that explains the whole line, so one
 dollar is never claimed twice: cancelled > duplicate > no agreement > relies on an unauthorised
 term > not priced > conflict > cites a missing document > price > seats.
+
+A conflict a reviewer has settled by naming the price (a ``price`` decision) is priced at that
+price instead, with the reviewer's ruling cited as evidence; see ``decide.feedback``.
 """
 
 from __future__ import annotations
@@ -12,7 +15,9 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from ledgerlens.domain.models import (
+    Decision,
     DocumentReference,
+    Evidence,
     Finding,
     FindingClass,
     Invoice,
@@ -103,11 +108,36 @@ def _missing_documents(mem: Memory, vendor: str) -> list[DocumentReference]:
     return [x for x in mem.references if x.vendor == vendor and x.ref not in have]
 
 
+def _ruling(rulings: list[Decision], conflict: Finding, prices: set[Decimal]) -> Decision | None:
+    """The latest price decision that settles this conflict: one made on this very finding, or
+    a standing one for the vendor and SKU that names one of the prices now in conflict."""
+    for d in reversed(rulings):
+        same_line = (d.vendor, d.sku) == (conflict.vendor, conflict.sku)
+        if d.key == conflict.key or (d.standing and same_line and d.price in prices):
+            return d
+    return None
+
+
+def _settled(r: Resolved, d: Decision) -> Resolved:
+    assert d.price is not None
+    chosen = next((t for t in r.candidates if t.price == d.price), None)
+    ruling = Evidence(
+        f"decision:{d.finding_id}",
+        f"{d.reviewer} ruled on {d.decided_on} that ${d.price} governs {d.sku}"
+        + (f" ({d.note})" if d.note else ""),
+    )
+    evidence = [*([chosen.evidence] if chosen else []), ruling]
+    return Resolved("agreed", d.price, r.licensed_qty, r.true_up_allowed, 0, d.price, evidence,
+                    unauthorised=r.unauthorised)  # fmt: skip
+
+
 def _ordered(invoices: list[Invoice]) -> list[Invoice]:
     return sorted(invoices, key=lambda i: (i.issued, i.invoice_id))
 
 
-def check_lines(mem: Memory, authority: Authority | None = None) -> Iterator[Finding]:
+def check_lines(
+    mem: Memory, authority: Authority | None = None, rulings: list[Decision] | None = None
+) -> Iterator[Finding]:
     billed_before: dict[tuple[str, str, date, date], Invoice] = {}
     unknown_vendor_reported: set[str] = set()
     for inv in _ordered(mem.invoices):
@@ -215,21 +245,26 @@ def check_lines(mem: Memory, authority: Authority | None = None) -> Iterator[Fin
                     holder=inv.vendor,
                 )
                 continue
+            ruled: Decision | None = None
             if r.status == "conflict":
                 low = min(t.price for t in r.candidates)
-                if line.unit_price > low:
-                    yield _finding(
-                        C.CONFLICT,
-                        inv,
-                        line,
-                        (line.unit_price - low) * line.qty,
-                        _conflict_summary(line.sku, r),
-                        r.reason,
-                        [t.evidence for t in r.candidates],
-                        candidates=[str(t.price) for t in r.candidates],
-                        sources=[t.label for t in r.candidates],
-                    )
-                continue
+                conflict = _finding(
+                    C.CONFLICT,
+                    inv,
+                    line,
+                    (line.unit_price - low) * line.qty,
+                    _conflict_summary(line.sku, r),
+                    r.reason,
+                    [t.evidence for t in r.candidates],
+                    candidates=[str(t.price) for t in r.candidates],
+                    sources=[t.label for t in r.candidates],
+                )
+                ruled = _ruling(rulings or [], conflict, {t.price for t in r.candidates})
+                if ruled is None:
+                    if line.unit_price > low:
+                        yield conflict
+                    continue
+                r = _settled(r, ruled)
             missing = _missing_documents(mem, inv.vendor)
             if missing and _over(line, r) > 0:
                 ref = missing[0]
@@ -263,15 +298,20 @@ def check_lines(mem: Memory, authority: Authority | None = None) -> Iterator[Fin
                         allowed=str(r.price),
                     )
                 else:
+                    basis, rule, extra = f"agreed ${r.price}", "unit_price_above_agreed", {}
+                    if ruled:
+                        basis = f"ruled ${r.price} by {ruled.reviewer}"
+                        rule, extra = "unit_price_above_ruled", {"ruling": ruled.finding_id}
                     yield _finding(
                         C.PRICE_OVER_CONTRACT,
                         inv,
                         line,
                         (line.unit_price - r.price) * line.qty,
-                        f"{line.sku} billed at ${line.unit_price}, agreed ${r.price}",
-                        "unit_price_above_agreed",
+                        f"{line.sku} billed at ${line.unit_price}, {basis}",
+                        rule,
                         r.evidence,
                         allowed=str(r.price),
+                        **extra,
                     )
             if r.licensed_qty is not None and line.qty > r.licensed_qty and not r.true_up_allowed:
                 unit = min(line.unit_price, r.price) if r.price is not None else line.unit_price
@@ -372,9 +412,15 @@ def check_totals(mem: Memory) -> Iterator[Finding]:
         )
 
 
-def detect(mem: Memory, as_of: date, authority: Authority | None = None) -> list[Finding]:
+def detect(
+    mem: Memory,
+    as_of: date,
+    authority: Authority | None = None,
+    rulings: list[Decision] | None = None,
+) -> list[Finding]:
+    """Every finding the facts in memory support. ``rulings`` are reviewers' price decisions."""
     return [
-        *check_lines(mem, authority),
+        *check_lines(mem, authority, rulings),
         *check_totals(mem),
         *check_credits(mem, as_of),
         *check_renewals(mem, as_of),

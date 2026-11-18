@@ -7,12 +7,15 @@ from ledgerlens.decide.policy import Mode, decide
 from ledgerlens.domain.models import (
     Action,
     Agreement,
+    Answer,
+    Decision,
     DocumentReference,
     Evidence,
     Invoice,
     InvoiceLine,
     PriceStatement,
     PriceTerm,
+    Scope,
 )
 from ledgerlens.rules.authority import Authority, Signatory
 from ledgerlens.rules.detectors import detect
@@ -155,3 +158,52 @@ def test_a_cited_document_that_is_on_file_is_not_missing():
     mem = Memory(agreements=[order_form()], invoices=[invoice("12.00", 5)])
     mem.references = [cited("OF-2026-001")]
     assert found(mem) == [("price_over_contract", "unit_price_above_agreed", "10.00")]
+
+
+def ruling(price, scope=Scope.STANDING, key="other", reviewer="Ada Finch"):
+    return Decision(
+        "abcd1234", key, Answer.PRICE, scope, reviewer, date(2026, 5, 20), "conflict", "Vendo",
+        "VN-SEAT", "later_email_disagrees_with_signed_terms", price=Decimal(price),
+    )  # fmt: skip
+
+
+def conflicted(unit):
+    mem = Memory(agreements=[order_form()], invoices=[invoice(unit, 5)])
+    mem.prices = [email_price("8.00")]
+    return mem
+
+
+def test_a_price_ruling_settles_the_conflict_and_prices_the_line_against_it():
+    (f,) = detect(conflicted("10.00"), AS_OF, AUTH, [ruling("8.00")])
+    assert (str(f.cls), f.rule, f.amount) == (
+        "price_over_contract",
+        "unit_price_above_ruled",
+        Decimal("10.00"),
+    )
+    assert f.details["ruling"] == "abcd1234" and "ruled $8.00 by Ada Finch" in f.summary
+    assert [e.doc_id for e in f.evidence] == ["INV-1", "mail", "decision:abcd1234"]
+    assert "Ada Finch ruled on 2026-05-20 that $8.00 governs VN-SEAT" in f.evidence[-1].quote
+
+
+def test_ruling_for_the_signed_price_means_nothing_is_owed():
+    assert detect(conflicted("10.00"), AS_OF, AUTH, [ruling("10.00")]) == []
+
+
+def test_standing_ruling_only_settles_conflicts_between_the_same_prices():
+    mem = conflicted("10.00")
+    mem.prices = [email_price("7.00")]
+    assert found_with(mem, [ruling("8.00")]) == [
+        ("conflict", "later_email_disagrees_with_signed_terms", "15.00")
+    ]
+
+
+def test_one_off_ruling_settles_only_the_conflict_it_answered():
+    (c,) = detect(conflicted("10.00"), AS_OF, AUTH)
+    assert detect(conflicted("10.00"), AS_OF, AUTH, [ruling("10.00", Scope.ONCE, c.key)]) == []
+    assert found_with(conflicted("10.00"), [ruling("10.00", Scope.ONCE)]) == [
+        ("conflict", "later_email_disagrees_with_signed_terms", "10.00")
+    ]
+
+
+def found_with(mem, rulings):
+    return [(str(f.cls), f.rule, str(f.amount)) for f in detect(mem, AS_OF, AUTH, rulings)]
