@@ -15,6 +15,7 @@ from ledgerlens.domain.models import (
     Cancellation,
     CreditPromise,
     DocumentReference,
+    FindingRecord,
     Invoice,
     PriceStatement,
 )
@@ -42,6 +43,7 @@ class Memory:
     vendor_domains: dict[str, str] = field(default_factory=dict)
     batches: list[str] = field(default_factory=list)
     reported: dict[str, str] = field(default_factory=dict)  # finding key -> batch first reported
+    findings: dict[str, FindingRecord] = field(default_factory=dict)  # by id, for reviewers
 
     def absorb(self, batch: str, x: Extraction) -> None:
         """Add a batch's facts, skipping exact repeats (a forwarded copy of the same invoice)."""
@@ -65,6 +67,7 @@ class Memory:
             vendor_domains=raw.get("vendor_domains", {}),
             batches=raw.get("batches", []),
             reported=raw.get("reported", {}),
+            findings={k: decode(FindingRecord, v) for k, v in raw.get("findings", {}).items()},
         )
         for name, tp in FACT_TYPES.items():
             setattr(mem, name, [decode(tp, d) for d in raw.get(name, [])])
@@ -77,6 +80,7 @@ class Memory:
             "vendor_domains": self.vendor_domains,
             "batches": self.batches,
             "reported": self.reported,
+            "findings": {k: encode(v) for k, v in self.findings.items()},
         }
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
