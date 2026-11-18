@@ -7,6 +7,7 @@ import types
 import typing
 from datetime import date
 from decimal import Decimal
+from enum import Enum
 from typing import Any
 
 
@@ -30,7 +31,7 @@ def decode(tp: Any, data: Any) -> Any:
         inner = [a for a in typing.get_args(tp) if a is not type(None)]
         return decode(inner[0], data)
     if origin in (tuple, list):
-        item = typing.get_args(tp)[0]
+        item = typing.get_args(tp)[0]  # tuple[X, ...] or list[X]
         seq = [decode(item, x) for x in data]
         return tuple(seq) if origin is tuple else seq
     if dataclasses.is_dataclass(tp):
@@ -40,4 +41,6 @@ def decode(tp: Any, data: Any) -> Any:
         return Decimal(data)
     if tp is date:
         return date.fromisoformat(data)
+    if isinstance(tp, type) and issubclass(tp, Enum):
+        return tp(data)
     return data

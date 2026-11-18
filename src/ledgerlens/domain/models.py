@@ -6,6 +6,7 @@ Rules only ever read facts, never raw text, so each finding can cite its sources
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -185,10 +186,79 @@ class Finding:
             )
         )
 
+    @property
+    def id(self) -> str:
+        """Short handle for the key, used by reviewers to answer a finding."""
+        return hashlib.sha1(self.key.encode("utf-8")).hexdigest()[:8]
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["cls"] = str(self.cls)
         d["amount"] = str(self.amount)
         d["action"] = str(self.action) if self.action else None
         d["key"] = self.key
+        d["id"] = self.id
         return d
+
+
+@dataclass(frozen=True)
+class FindingRecord:
+    """What is remembered about a reported finding, so a reviewer can answer it later."""
+
+    id: str
+    key: str
+    cls: str
+    vendor: str
+    invoice_id: str | None
+    sku: str | None
+    rule: str
+    amount: Decimal
+    summary: str
+    batch: str
+    candidates: tuple[Decimal, ...] = ()  # the prices a conflict is between
+
+
+class Answer(StrEnum):
+    DISMISS = "dismiss"  # not a problem: close it, take no action
+    APPROVE = "approve"  # go ahead with the proposed action
+    PRICE = "price"  # a conflict: this price governs
+
+
+class Scope(StrEnum):
+    ONCE = "once"  # this finding only
+    STANDING = "standing"  # this finding and later ones of the same kind
+
+
+@dataclass(frozen=True)
+class Decision:
+    """A reviewer's answer to a finding. Kept forever; a revoked decision stops applying.
+
+    A one-off decision applies to the finding with ``key`` (which reappears only if the mailbox
+    is audited again from scratch). A standing one also applies to later findings with the same
+    class, vendor, SKU and rule, as long as they are worth no more than ``up_to``."""
+
+    finding_id: str
+    key: str
+    answer: Answer
+    scope: Scope
+    reviewer: str
+    decided_on: date
+    cls: str
+    vendor: str
+    sku: str | None
+    rule: str
+    price: Decimal | None = None
+    up_to: Decimal | None = None
+    note: str = ""
+    revoked_on: date | None = None
+
+    @property
+    def active(self) -> bool:
+        return self.revoked_on is None
+
+    @property
+    def standing(self) -> bool:
+        return self.scope is Scope.STANDING
+
+    def label(self) -> str:
+        return f"{self.scope} {self.answer} by {self.reviewer} on {self.decided_on}"
