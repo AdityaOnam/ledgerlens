@@ -77,6 +77,37 @@ made, and the console says so.
 Conflicts, cannot_determine items and anything at or above the review threshold (default $2,500)
 always go to human review.
 
+## Answering escalations
+
+Every finding has an 8-character id, shown on the console and in the report. A reviewer answers
+it, and the answer is applied from the next audit on:
+
+```bash
+ledgerlens review 7a31e82a price --price 19.50 --standing --by "Priya Raman" --note "email deal stands"
+ledgerlens review 3f0c9e21 dismiss --by "Priya Raman"          # this finding only
+ledgerlens review 51be0a7d approve --standing --by "Priya Raman" --up-to 1000
+ledgerlens decisions                                           # list them
+ledgerlens review 51be0a7d --revoke                            # withdraw
+```
+
+| Answer | Once (default) | `--standing` |
+|---|---|---|
+| `dismiss` | That finding is closed, no action | Later findings of the same class, vendor, SKU and rule are closed too |
+| `approve` | Its action goes ahead even above the review threshold; an approved conflict is disputed down to the lowest price | Same for later findings of that kind |
+| `price` (conflicts only) | The named price governs that line | The named price governs later invoices for that vendor and SKU, so they are priced against it instead of escalating again |
+
+- A standing `dismiss` or `approve` covers later findings only up to `--up-to` (by default the
+  amount of the finding answered). A bigger one is reported as usual, with a note saying why.
+- The price must be one of the prices in conflict, and a standing price only settles a later
+  conflict between the same prices. A new amendment that changes the picture escalates again.
+- Conflicts and renewal notices cannot be approved standing: a conflict is settled by naming
+  its price, and each renewal is its own decision.
+- Supervised mode still executes nothing, approved or not. The reviewer's name and date are
+  kept with every decision, and a price ruling is cited as evidence in the findings it prices.
+- Decisions are stored in `decisions.json` in the state directory. `audit --reset` forgets the
+  batches but keeps the decisions, so a mailbox audited again from scratch is answered the same
+  way; a one-off decision applies again to the same finding there, and to nothing else.
+
 ## Quick start
 
 ```bash
@@ -142,9 +173,9 @@ src/ledgerlens/
   domain/    money, dates, typed facts and findings
   ingest/    mailbox reader, PDF/XLSX/OCR conversion, layout parser, LLM extractor,
              grounding check, cache
-  store/     on-disk memory of agreed terms, carried across batches
+  store/     on-disk memory of agreed terms and reviewers' decisions, carried across batches
   rules/     one detector per finding class, term precedence, who may agree terms
-  decide/    action policy (supervised / autonomous)
+  decide/    action policy (supervised / autonomous), reviewers' decisions
   report/    JSON and Markdown reports
 data/samples one synthetic mailbox per fictional company
 docs/        design notes and decision log
