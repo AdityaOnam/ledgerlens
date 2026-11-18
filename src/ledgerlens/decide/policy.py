@@ -5,6 +5,10 @@ Confidence never chooses an action. Only the class, the amount and the mode do:
 - autonomous: an action executes only if it is low-risk (dispute, credit request or document
   request), below the review threshold, and not a conflict.
 Conflicts and renewal decisions always go to a person.
+
+A finding a reviewer has approved (see ``feedback``) has had its person: it skips the threshold,
+and an approved conflict is disputed down to the lowest price stated. Supervised mode still
+executes nothing, and a renewal notice is never sent by Ledgerlens itself.
 """
 
 from __future__ import annotations
@@ -41,7 +45,10 @@ class Mode(StrEnum):
 
 def decide(finding: Finding, mode: Mode, threshold: Decimal = DEFAULT_REVIEW_THRESHOLD) -> Finding:
     action = NATURAL_ACTION[finding.cls]
-    if action not in AMOUNT_INDEPENDENT and finding.amount >= threshold:
+    if finding.details.get("approved_by"):
+        if finding.cls is C.CONFLICT:
+            action = Action.DISPUTE
+    elif action not in AMOUNT_INDEPENDENT and finding.amount >= threshold:
         action = Action.HUMAN_REVIEW
     finding.action = action
     finding.executed = mode is Mode.AUTONOMOUS and action in SAFE_TO_AUTOMATE
