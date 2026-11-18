@@ -28,6 +28,7 @@ def to_json(results: list[BatchResult]) -> dict:
                 "as_of": r.as_of.isoformat(),
                 "notes": r.notes,
                 "findings": [f.to_dict() for f in r.findings],
+                "closed": [f.to_dict() for f in r.closed],
             }
             for r in results
         ]
@@ -49,7 +50,7 @@ def to_markdown(results: list[BatchResult]) -> str:
     out += [f"| `{k}` | {v} |" for k, v in sorted(counts.items())]
     for r in results:
         out += ["", f"## {r.batch} (as of {r.as_of})", ""]
-        if not r.findings:
+        if not r.findings and not r.closed:
             out.append("No new findings.")
         for f in r.findings:
             state = "done" if f.executed else "recommended"
@@ -59,11 +60,20 @@ def to_markdown(results: list[BatchResult]) -> str:
                 "",
                 f.summary,
                 "",
-                f"Action: **{f.action}** ({state}). Rule: `{f.rule}`.",
+                f"Action: **{f.action}** ({state}). Rule: `{f.rule}`. Finding `{f.id}`.",
                 "",
             ]
+            if f.details.get("approved_by"):
+                out += [f"Approved: {f.details['approved_by']}.", ""]
             for e in f.evidence:
                 out += [f"> {e.quote}  ", f"> source: `{e.doc_id}`", ""]
+        if r.closed:
+            out += ["", "Closed by a reviewer's decision:", ""]
+            out += [
+                f"- `{f.id}` `{f.cls}` {f.vendor}, ${f.amount:,.2f}: {f.summary}. "
+                f"Dismissed: {f.details['dismissed_by']}."
+                for f in r.closed
+            ]
         if r.notes:
             out += ["", "Notes:", *[f"- {n}" for n in r.notes]]
     return "\n".join(out) + "\n"
