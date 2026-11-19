@@ -13,7 +13,15 @@ ledgerlens review <finding-id> dismiss|approve|price --by NAME [--standing] [--p
 ledgerlens decisions
 
 A reviewer's answer is stored in the state directory and applied from the next audit on: once
-to that finding only, or standing to later findings of the same kind as well."""
+to that finding only, or standing to later findings of the same kind as well.
+
+ledgerlens synth <folder> [--seed N] [--vendors K] [--months M] [--batches B]
+ledgerlens eval [--seeds 1-20] [--vendors K] [--months M] [--batches B] [--extractor ...]
+[--min-precision P] [--min-recall R]
+
+synth writes an invented mailbox with problems planted at random, and TRUTH.json, the findings
+an audit of it must produce. eval audits one such mailbox per seed and reports precision, recall
+and dollars recovered vs. wrongly claimed; it exits 1 if a --min-* bar is not met."""
 
 from __future__ import annotations
 
@@ -21,6 +29,7 @@ import argparse
 import importlib.util
 import os
 import sys
+import tempfile
 from collections.abc import Mapping
 from decimal import Decimal
 from pathlib import Path
@@ -124,13 +133,110 @@ def main(argv: list[str] | None = None) -> int:
 
     d = sub.add_parser("decisions", help="list reviewers' decisions")
     d.add_argument("--state", type=Path, default=Path(".state"))
+
+    s = sub.add_parser("synth", help="write a synthetic mailbox and the findings it must produce")
+    s.add_argument("folder", type=Path, help="an empty or new folder")
+    s.add_argument("--seed", type=int, default=1)
+    _world_args(s)
+
+    e = sub.add_parser("eval", help="audit synthetic mailboxes and score them against the oracle")
+    e.add_argument("--seeds", default="1-10", help="e.g. 7, 1-20 or 1,4,9-12")
+    _world_args(e)
+    e.add_argument("--extractor", choices=EXTRACTORS, default="layout")
+    e.add_argument("--model", default=None, help="Claude model for --extractor llm/auto")
+    e.add_argument("--cache", type=Path, default=Path(".cache/llm"), help="model response cache")
+    e.add_argument("--out", type=Path, default=Path("out/eval"))
+    e.add_argument("--work", type=Path, default=None, help="keep the mailboxes here (empty dir)")
+    e.add_argument("--min-precision", type=float, default=None)
+    e.add_argument("--min-recall", type=float, default=None)
     args = p.parse_args(argv)
 
     if args.cmd == "review":
         return review(p, args)
     if args.cmd == "decisions":
         return list_decisions(args.state)
+    if args.cmd == "synth":
+        return synth(p, args)
+    if args.cmd == "eval":
+        return evaluate(p, args)
     return audit(p, args)
+
+
+def _world_args(sp: argparse.ArgumentParser) -> None:
+    sp.add_argument("--vendors", type=int, default=6, help="vendors per mailbox (1-12)")
+    sp.add_argument("--months", type=int, default=6, help="months of invoices")
+    sp.add_argument("--batches", type=int, default=2, help="batches the months are split into")
+
+
+def _empty_dir(p: argparse.ArgumentParser, folder: Path) -> None:
+    if folder.exists() and (not folder.is_dir() or any(folder.iterdir())):
+        p.error(f"{folder} is not empty; choose a new or empty folder")
+
+
+def synth(p: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    from ledgerlens.evaluate.oracle import expected
+    from ledgerlens.evaluate.runner import write_truth
+    from ledgerlens.evaluate.synth import generate, write_mailbox
+
+    _empty_dir(p, args.folder)
+    try:
+        world = generate(args.seed, args.vendors, args.months, args.batches)
+    except ValueError as exc:
+        p.error(str(exc))
+    written = write_mailbox(world, args.folder)
+    truth = expected(world)
+    write_truth(truth, args.folder / "TRUTH.json")
+    print(
+        f"{world.company}: {len(world.vendors)} vendors, {len(written)} emails in "
+        f"{len(world.cutoffs)} batch(es); {len(truth)} expected finding(s) in "
+        f"{args.folder / 'TRUTH.json'}"
+    )
+    return 0
+
+
+def evaluate(p: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    from ledgerlens.evaluate import runner
+
+    try:
+        seeds = runner.parse_seeds(args.seeds)
+    except ValueError as exc:
+        p.error(f"--seeds: {exc}")
+    extractor, described = choose_extractor(args.extractor, args.cache, args.model)
+    if args.work is not None:
+        _empty_dir(p, args.work)
+    with tempfile.TemporaryDirectory(prefix="ledgerlens-eval-") as tmp:
+        try:
+            ev = runner.evaluate(
+                seeds,
+                args.work or Path(tmp),
+                args.vendors,
+                args.months,
+                args.batches,
+                extractor=extractor,
+                described=described,
+            )
+        except ValueError as exc:
+            p.error(str(exc))
+    t = ev.total
+    print(f"Extractor: {described}; {len(seeds)} mailbox(es)")
+    print(
+        f"Precision {t.precision:.1%}  recall {t.recall:.1%}  "
+        f"({t.tp} found, {t.fn} missed, {t.fp} false, {len(t.wrong_amounts)} wrong amount)"
+    )
+    print(
+        f"Dollars: ${t.at_stake:,.2f} at stake, ${t.recovered:,.2f} recovered, "
+        f"${t.wrongly_claimed:,.2f} wrongly claimed"
+    )
+    _, md_path = runner.write(ev, args.out)
+    print(f"Report: {md_path}")
+    failed = []
+    if args.min_precision is not None and t.precision < args.min_precision:
+        failed.append(f"precision {t.precision:.4f} < {args.min_precision}")
+    if args.min_recall is not None and t.recall < args.min_recall:
+        failed.append(f"recall {t.recall:.4f} < {args.min_recall}")
+    for msg in failed:
+        print(f"FAILED: {msg}", file=sys.stderr)
+    return 1 if failed else 0
 
 
 def review(p: argparse.ArgumentParser, args: argparse.Namespace) -> int:

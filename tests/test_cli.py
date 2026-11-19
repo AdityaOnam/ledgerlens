@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -67,3 +68,59 @@ def test_bad_authority_file_is_a_clear_error(tmp_path, capsys):
         with pytest.raises(SystemExit):
             main(["audit", str(box), "--state", str(tmp_path / "s"), "--authority", str(path)])
         assert "authority file:" in capsys.readouterr().err
+
+
+def test_synth_writes_a_mailbox_and_its_truth(tmp_path, capsys):
+    folder = tmp_path / "mb"
+    assert main(["synth", str(folder), "--seed", "4", "--vendors", "3", "--months", "4"]) == 0
+    truth = json.loads((folder / "TRUTH.json").read_text(encoding="utf-8"))
+    assert sorted(p.name for p in folder.iterdir()) == ["TRUTH.json", "batch_01", "batch_02"]
+    assert f"{len(truth)} expected finding(s)" in capsys.readouterr().out
+
+
+def test_synth_refuses_a_folder_that_is_not_empty(tmp_path):
+    (tmp_path / "keep.txt").write_text("mine", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        main(["synth", str(tmp_path)])
+    assert (tmp_path / "keep.txt").read_text(encoding="utf-8") == "mine"
+
+
+def test_eval_reports_and_passes_its_bars(tmp_path, capsys):
+    out = tmp_path / "o"
+    code = main(
+        ["eval", "--seeds", "1-3", "--out", str(out), "--min-precision", "1", "--min-recall", "1"]
+    )
+    printed = capsys.readouterr().out
+    assert code == 0
+    assert "Precision 100.0%  recall 100.0%" in printed and "$0.00 wrongly claimed" in printed
+    assert (out / "eval.md").exists() and (out / "eval.json").exists()
+
+
+def test_eval_keeps_mailboxes_in_work(tmp_path):
+    work = tmp_path / "w"
+    assert main(["eval", "--seeds", "2", "--work", str(work), "--out", str(tmp_path / "o")]) == 0
+    assert (work / "seed_2" / "mailbox" / "batch_01").is_dir()
+
+
+def test_eval_fails_when_a_bar_is_missed(tmp_path, monkeypatch, capsys):
+    from ledgerlens.evaluate import runner
+
+    real = runner.evaluate
+
+    def broken(seeds, work, *args, **kwargs):
+        def reader(documents, domains):
+            x = extract(documents, domains)
+            x.cancellations.clear()
+            return x
+
+        kwargs["extractor"] = reader
+        return real(seeds, work, *args, **kwargs)
+
+    monkeypatch.setattr(runner, "evaluate", broken)
+    code = main(["eval", "--seeds", "1-4", "--out", str(tmp_path / "o"), "--min-recall", "1"])
+    assert code == 1 and "FAILED: recall" in capsys.readouterr().err
+
+
+def test_eval_rejects_bad_seeds(tmp_path):
+    with pytest.raises(SystemExit):
+        main(["eval", "--seeds", "9-1", "--out", str(tmp_path)])
