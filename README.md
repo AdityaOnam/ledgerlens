@@ -166,6 +166,40 @@ The grounding check proves that a quote is in the document. It cannot prove the 
 honest: text planted in a document can still be quoted. That is why every finding shows its
 quotes, and why the action policy decides what happens next, not the model.
 
+## Measuring it
+
+The sample mailbox shows a handful of cases. To measure Ledgerlens on many, generate invented
+mailboxes whose right answers are known in advance and score the audit against them:
+
+```bash
+ledgerlens eval --seeds 1-50                     # writes out/eval/eval.md and eval.json
+ledgerlens synth my-mailbox --seed 7             # one mailbox, plus TRUTH.json to look at
+```
+
+- Each seed invents a customer, up to twelve vendors and some months of order forms, CSV and
+  printed invoices, cancellations and credit promises, split into batches. Problems are planted
+  at random: overcharged seats, seats over the licence (and decoys where true-up allows them),
+  add-ons billed after cancellation, months billed twice, credits never applied, totals that do
+  not add up, renewals coming due, and vendors with no order form at all. The same seed always
+  gives the same mailbox, byte for byte.
+- An **oracle** works out what the audit must find from the invented world itself, never from
+  the mailbox, and imports nothing from Ledgerlens' readers or rules (a test checks this). It
+  replays the batches as the audit does, so a problem is expected in the first batch whose
+  documents prove it.
+- The audit is the real one, batch by batch. A finding matches an expected one when class,
+  vendor, invoice, SKU and reference agree. The report gives precision and recall, overall and
+  per class, and three dollar figures over the classes that claim money back:
+  **at stake** (what is owed), **recovered** (what the audit claimed of it) and **wrongly
+  claimed** (claimed but not owed, including the excess on a right finding with the wrong
+  amount). Every disagreement is listed.
+- `--vendors`, `--months` and `--batches` shape the mailboxes; `--extractor llm` scores the
+  Claude reader instead of the layout reader; `--work DIR` keeps the mailboxes;
+  `--min-precision` and `--min-recall` make the command exit 1 below a bar.
+
+On seeds 1-50 the layout reader finds all 605 planted problems with no false findings and
+nothing wrongly claimed. Conflicts, amendments, emailed prices and authority are not generated
+yet; the sample mailbox covers them.
+
 ## Layout
 
 ```
@@ -177,6 +211,7 @@ src/ledgerlens/
   rules/     one detector per finding class, term precedence, who may agree terms
   decide/    action policy (supervised / autonomous), reviewers' decisions
   report/    JSON and Markdown reports
+  evaluate/  synthetic mailbox generator, independent oracle, scoring and eval runner
 data/samples one synthetic mailbox per fictional company
 docs/        design notes and decision log
 ```
