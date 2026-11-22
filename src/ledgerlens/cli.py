@@ -34,7 +34,7 @@ from collections.abc import Mapping
 from decimal import Decimal
 from pathlib import Path
 
-from ledgerlens import app
+from ledgerlens import __version__, app
 from ledgerlens.app import run
 from ledgerlens.decide.feedback import FeedbackError
 from ledgerlens.decide.policy import DEFAULT_REVIEW_THRESHOLD, Mode
@@ -98,6 +98,7 @@ def choose_extractor(
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="ledgerlens", description=__doc__)
+    p.add_argument("--version", action="version", version=f"ledgerlens {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("audit", help="process new batches in a mailbox")
     a.add_argument("mailbox", type=Path)

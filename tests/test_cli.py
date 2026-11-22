@@ -124,3 +124,12 @@ def test_eval_fails_when_a_bar_is_missed(tmp_path, monkeypatch, capsys):
 def test_eval_rejects_bad_seeds(tmp_path):
     with pytest.raises(SystemExit):
         main(["eval", "--seeds", "9-1", "--out", str(tmp_path)])
+
+
+def test_version(capsys):
+    from ledgerlens import __version__
+
+    with pytest.raises(SystemExit) as exit_:
+        main(["--version"])
+    assert exit_.value.code == 0
+    assert capsys.readouterr().out.strip() == f"ledgerlens {__version__}"
