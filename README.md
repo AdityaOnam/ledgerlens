@@ -1,5 +1,7 @@
 # Ledgerlens
 
+[![CI](https://github.com/AdityaOnam/ledgerlens/actions/workflows/ci.yml/badge.svg)](https://github.com/AdityaOnam/ledgerlens/actions/workflows/ci.yml)
+
 **Find the money leaking out of your SaaS and cloud bills.**
 
 Companies pay dozens of software vendors every month. Contracts promise seat prices, renewal caps
@@ -117,6 +119,12 @@ ledgerlens audit data/samples/acme --mode supervised
 pytest
 ```
 
+To see the result without installing anything, read the demo reports of the sample mailbox:
+[supervised](docs/demo/supervised/report.md) (every finding a recommendation) and
+[autonomous](docs/demo/autonomous/report.md) (low-risk findings under the threshold actioned).
+Its planted problems and decoys are listed in
+[data/samples/acme/EXPECTED.md](data/samples/acme/EXPECTED.md).
+
 ## What it reads
 
 Emails (`.eml`) and their attachments:
@@ -200,6 +208,22 @@ On seeds 1-50 the layout reader finds all 605 planted problems with no false fin
 nothing wrongly claimed. Conflicts, amendments, emailed prices and authority are not generated
 yet; the sample mailbox covers them.
 
+## Development
+
+```bash
+pip install -e ".[dev]"                 # add ,llm to run the tests with the SDK installed
+python -m ruff check src tests scripts
+python -m ruff format --check src tests scripts
+python -m mypy
+python -m pytest -q
+```
+
+The tests never call a model: the Claude reader is exercised with a fake client. CI runs all of
+the above on Python 3.11-3.13 (and Windows), checks that `data/samples` and `docs/demo` match
+`scripts/make_samples.py` and `scripts/make_demo.py`, and fails if a 20-seed eval drops below
+100 % precision or recall. After changing the samples or anything that shows in a report,
+run both scripts and commit what they write.
+
 ## Layout
 
 ```
@@ -213,10 +237,12 @@ src/ledgerlens/
   report/    JSON and Markdown reports
   evaluate/  synthetic mailbox generator, independent oracle, scoring and eval runner
 data/samples one synthetic mailbox per fictional company
-docs/        design notes and decision log
+docs/        roadmap and demo reports
+scripts/     sample mailbox and demo report generators
 ```
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for what's built and what's next.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for how it was built and [CHANGELOG.md](CHANGELOG.md)
+for what is in each release.
 
 All companies, people and numbers in `data/` are invented.
 
