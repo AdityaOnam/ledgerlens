@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m ruff check src tests scripts
+      - run: python -m ruff format --check src tests scripts
+      - run: python -m mypy
+
+  test:
+    name: Tests (${{ matrix.os }}, py${{ matrix.python }}${{ matrix.extras && ', llm' || '' }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11", "3.12", "3.13"]
+        extras: [""]
+        include:
+          - os: windows-latest
+            python: "3.12"
+            extras: ""
+          # With the SDK installed; the tests use a fake client and never call the network.
+          - os: ubuntu-latest
+            python: "3.12"
+            extras: ",llm"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: python -m pip install -e ".[dev${{ matrix.extras }}]"
+      - run: python -m pytest -q -p no:asyncio
+        env:
+          ANTHROPIC_API_KEY: ""
+
+  samples:
+    name: Samples and eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Sample mailbox is what the generator writes
+        run: |
+          python scripts/make_samples.py
+          git diff --exit-code -- data/samples
+      - name: Demo report is up to date
+        run: |
+          python scripts/make_demo.py
+          git diff --exit-code -- docs/demo
+      - name: Eval on 20 synthetic mailboxes
+        run: ledgerlens eval --seeds 1-20 --min-precision 1 --min-recall 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: out/eval/
