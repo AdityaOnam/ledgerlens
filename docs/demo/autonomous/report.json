@@ -1,0 +1,421 @@
+{
+  "batches": [
+    {
+      "batch": "batch_01",
+      "as_of": "2026-02-10",
+      "notes": [],
+      "findings": [
+        {
+          "cls": "price_over_contract",
+          "vendor": "Cloudkeep Ltd.",
+          "summary": "CK-STORE-TB billed at $23.00, agreed $21.50",
+          "amount": "60.00",
+          "evidence": [
+            {
+              "doc_id": "batch_01/005_cloudkeep_jan/INV-CK-301.csv",
+              "quote": "line,CK-STORE-TB,Backup storage,2026-01-01,2026-01-31,40,23.00,920.00"
+            },
+            {
+              "doc_id": "batch_01/002_cloudkeep_order_form/OF-2026-019.txt",
+              "quote": "| CK-STORE-TB | Backup storage, per TB | 21.50 | 40 |"
+            }
+          ],
+          "invoice_id": "INV-CK-301",
+          "sku": "CK-STORE-TB",
+          "rule": "unit_price_above_agreed",
+          "action": "dispute",
+          "executed": true,
+          "details": {
+            "period": "2026-01-01..2026-01-31",
+            "allowed": "21.50"
+          },
+          "key": "price_over_contract|Cloudkeep Ltd.|INV-CK-301|CK-STORE-TB|2026-01-01..2026-01-31|",
+          "id": "a55e14b1"
+        },
+        {
+          "cls": "seats_over_licensed",
+          "vendor": "Brightdesk Inc.",
+          "summary": "132 BD-PRO billed, 120 licensed and true-up not permitted",
+          "amount": "456.00",
+          "evidence": [
+            {
+              "doc_id": "batch_01/008_brightdesk_feb/INV-BD-1078.csv",
+              "quote": "line,BD-PRO,Pro seat,2026-02-01,2026-02-28,132,38.00,5016.00"
+            },
+            {
+              "doc_id": "batch_01/001_brightdesk_order_form/OF-2025-311.txt",
+              "quote": "| BD-PRO | Brightdesk Pro seat | 38.00 | 120 |"
+            }
+          ],
+          "invoice_id": "INV-BD-1078",
+          "sku": "BD-PRO",
+          "rule": "qty_above_licensed_no_true_up",
+          "action": "dispute",
+          "executed": true,
+          "details": {
+            "period": "2026-02-01..2026-02-28",
+            "licensed": 120
+          },
+          "key": "seats_over_licensed|Brightdesk Inc.|INV-BD-1078|BD-PRO|2026-02-01..2026-02-28|",
+          "id": "55935645"
+        },
+        {
+          "cls": "billed_after_cancel",
+          "vendor": "Brightdesk Inc.",
+          "summary": "BD-ANALYTICS billed for 2026-02-01..2026-02-28 after cancellation effective 2026-02-01",
+          "amount": "600.00",
+          "evidence": [
+            {
+              "doc_id": "batch_01/008_brightdesk_feb/INV-BD-1078.csv",
+              "quote": "line,BD-ANALYTICS,Analytics add-on,2026-02-01,2026-02-28,1,600.00,600.00"
+            },
+            {
+              "doc_id": "batch_01/006_cancel_analytics",
+              "quote": "Please cancel BD-ANALYTICS effective 2026-02-01"
+            }
+          ],
+          "invoice_id": "INV-BD-1078",
+          "sku": "BD-ANALYTICS",
+          "rule": "cancelled_sku_billed",
+          "action": "dispute",
+          "executed": true,
+          "details": {
+            "period": "2026-02-01..2026-02-28",
+            "requested_by": "priya.raman@acme-robotics.com"
+          },
+          "key": "billed_after_cancel|Brightdesk Inc.|INV-BD-1078|BD-ANALYTICS|2026-02-01..2026-02-28|",
+          "id": "c93f06fb"
+        },
+        {
+          "cls": "renewal_notice_due",
+          "vendor": "Pagewise",
+          "summary": "OF-2025-090 auto-renews 2026-04-01; notice is due by 2026-03-01 (19 days)",
+          "amount": "7200.00",
+          "evidence": [
+            {
+              "doc_id": "batch_01/003_pagewise_order_form/OF-2025-090.txt",
+              "quote": "ORDER FORM OF-2025-090"
+            }
+          ],
+          "invoice_id": null,
+          "sku": null,
+          "rule": "auto_renew_notice_window",
+          "action": "human_review",
+          "executed": false,
+          "details": {
+            "ref": "OF-2025-090",
+            "deadline": "2026-03-01",
+            "term_end": "2026-03-31"
+          },
+          "key": "renewal_notice_due|Pagewise||||OF-2025-090",
+          "id": "6c955b4a"
+        }
+      ],
+      "closed": []
+    },
+    {
+      "batch": "batch_02",
+      "as_of": "2026-09-15",
+      "notes": [],
+      "findings": [
+        {
+          "cls": "duplicate_charge",
+          "vendor": "Cloudkeep Ltd.",
+          "summary": "CK-STORE-TB for 2026-01-01..2026-01-31 already billed on INV-CK-301",
+          "amount": "860.00",
+          "evidence": [
+            {
+              "doc_id": "batch_02/103_cloudkeep_rebill/INV-CK-301A.csv",
+              "quote": "line,CK-STORE-TB,Backup storage,2026-01-01,2026-01-31,40,21.50,860.00"
+            },
+            {
+              "doc_id": "batch_01/005_cloudkeep_jan/INV-CK-301.csv",
+              "quote": "invoice_id,INV-CK-301"
+            }
+          ],
+          "invoice_id": "INV-CK-301A",
+          "sku": "CK-STORE-TB",
+          "rule": "same_sku_same_period",
+          "action": "dispute",
+          "executed": true,
+          "details": {
+            "period": "2026-01-01..2026-01-31",
+            "first_invoice": "INV-CK-301"
+          },
+          "key": "duplicate_charge|Cloudkeep Ltd.|INV-CK-301A|CK-STORE-TB|2026-01-01..2026-01-31|",
+          "id": "92645054"
+        },
+        {
+          "cls": "uplift_over_cap",
+          "vendor": "Pagewise",
+          "summary": "PW-TEAM renewed at $13.20; cap allows $12.60 (from $12.00)",
+          "amount": "30.00",
+          "evidence": [
+            {
+              "doc_id": "batch_02/104_pagewise_renewal/INV-PW-077.csv",
+              "quote": "line,PW-TEAM,Team seat,2026-04-01,2026-04-30,50,13.20,660.00"
+            },
+            {
+              "doc_id": "batch_01/003_pagewise_order_form/OF-2025-090.txt",
+              "quote": "| PW-TEAM | Pagewise Team seat | 12.00 | 50 |"
+            },
+            {
+              "doc_id": "batch_01/003_pagewise_order_form/OF-2025-090.txt",
+              "quote": "Renewal uplift cap: 5%"
+            }
+          ],
+          "invoice_id": "INV-PW-077",
+          "sku": "PW-TEAM",
+          "rule": "renewal_uplift_cap",
+          "action": "dispute",
+          "executed": true,
+          "details": {
+            "period": "2026-04-01..2026-04-30",
+            "allowed": "12.60"
+          },
+          "key": "uplift_over_cap|Pagewise|INV-PW-077|PW-TEAM|2026-04-01..2026-04-30|",
+          "id": "70225b40"
+        },
+        {
+          "cls": "conflict",
+          "vendor": "Brightdesk Inc.",
+          "summary": "Agreements effective the same day disagree on BD-PRO: $36.00 vs $35.00",
+          "amount": "360.00",
+          "evidence": [
+            {
+              "doc_id": "batch_02/107_brightdesk_jun/INV-BD-1190.csv",
+              "quote": "line,BD-PRO,Pro seat,2026-06-01,2026-06-30,120,38.00,4560.00"
+            },
+            {
+              "doc_id": "batch_02/105_brightdesk_amendment/AM-2026-03.txt",
+              "quote": "| BD-PRO | Brightdesk Pro seat | 36.00 | 120 |"
+            },
+            {
+              "doc_id": "batch_02/106_brightdesk_amendment_v2/AM-2026-04.txt",
+              "quote": "| BD-PRO | Brightdesk Pro seat | 35.00 | 120 |"
+            }
+          ],
+          "invoice_id": "INV-BD-1190",
+          "sku": "BD-PRO",
+          "rule": "same_day_amendments_disagree",
+          "action": "human_review",
+          "executed": false,
+          "details": {
+            "period": "2026-06-01..2026-06-30",
+            "candidates": [
+              "36.00",
+              "35.00"
+            ],
+            "sources": [
+              "amendment AM-2026-03",
+              "amendment AM-2026-04"
+            ]
+          },
+          "key": "conflict|Brightdesk Inc.|INV-BD-1190|BD-PRO|2026-06-01..2026-06-30|",
+          "id": "8d6ff40e"
+        },
+        {
+          "cls": "cannot_determine",
+          "vendor": "Fluxmetrics",
+          "summary": "No agreement on file for Fluxmetrics; order form OF-2026-052 is cited but was never received",
+          "amount": "2400.00",
+          "evidence": [
+            {
+              "doc_id": "batch_02/109_fluxmetrics_jul/INV-FX-0009.csv",
+              "quote": "invoice_id,INV-FX-0009"
+            },
+            {
+              "doc_id": "batch_02/108_fluxmetrics_intro",
+              "quote": "Hi Priya, hosting starts this month per order form OF-2026-052"
+            }
+          ],
+          "invoice_id": "INV-FX-0009",
+          "sku": null,
+          "rule": "no_agreement",
+          "action": "request_document",
+          "executed": true,
+          "details": {
+            "missing": "OF-2026-052",
+            "holder": "ar@fluxmetrics.io",
+            "ref": "OF-2026-052"
+          },
+          "key": "cannot_determine|Fluxmetrics|INV-FX-0009|||OF-2026-052",
+          "id": "bbc87974"
+        },
+        {
+          "cls": "credit_not_applied",
+          "vendor": "Cloudkeep Ltd.",
+          "summary": "Credit SLA-2026-02 of $350.00 promised 2026-02-10 is missing from 2 later invoice(s)",
+          "amount": "350.00",
+          "evidence": [
+            {
+              "doc_id": "batch_01/007_cloudkeep_outage",
+              "quote": "We will apply a service credit of $350.00 to your next invoice (ref SLA-2026-02)"
+            },
+            {
+              "doc_id": "batch_02/102_cloudkeep_mar/INV-CK-318.csv",
+              "quote": "invoice_id,INV-CK-318"
+            },
+            {
+              "doc_id": "batch_02/103_cloudkeep_rebill/INV-CK-301A.csv",
+              "quote": "invoice_id,INV-CK-301A"
+            }
+          ],
+          "invoice_id": null,
+          "sku": null,
+          "rule": "promised_credit_missing",
+          "action": "request_credit",
+          "executed": true,
+          "details": {
+            "ref": "SLA-2026-02",
+            "due_by": "2026-04-11"
+          },
+          "key": "credit_not_applied|Cloudkeep Ltd.||||SLA-2026-02",
+          "id": "57e863e1"
+        },
+        {
+          "cls": "renewal_notice_due",
+          "vendor": "Brightdesk Inc.",
+          "summary": "OF-2025-311 auto-renews 2026-12-01; notice is due by 2026-10-01 (16 days)",
+          "amount": "54720.00",
+          "evidence": [
+            {
+              "doc_id": "batch_01/001_brightdesk_order_form/OF-2025-311.txt",
+              "quote": "ORDER FORM OF-2025-311"
+            }
+          ],
+          "invoice_id": null,
+          "sku": null,
+          "rule": "auto_renew_notice_window",
+          "action": "human_review",
+          "executed": false,
+          "details": {
+            "ref": "OF-2025-311",
+            "deadline": "2026-10-01",
+            "term_end": "2026-11-30"
+          },
+          "key": "renewal_notice_due|Brightdesk Inc.||||OF-2025-311",
+          "id": "c4325bc0"
+        }
+      ],
+      "closed": []
+    },
+    {
+      "batch": "batch_03",
+      "as_of": "2026-11-10",
+      "notes": [],
+      "findings": [
+        {
+          "cls": "cannot_determine",
+          "vendor": "Pagewise",
+          "summary": "PW-TEAM billed at $13.00 x 60 as in amendment AM-2026-06, which Dev Malhotra, Engineering Manager signed without authority to agree terms",
+          "amount": "150.00",
+          "evidence": [
+            {
+              "doc_id": "batch_03/206_pagewise_oct/INV-PW-120.csv",
+              "quote": "line,PW-TEAM,Team seat,2026-10-01,2026-10-31,60,13.00,780.00"
+            },
+            {
+              "doc_id": "batch_03/205_pagewise_amendment/AM-2026-06.txt",
+              "quote": "| PW-TEAM | Pagewise Team seat | 13.00 | 60 |"
+            },
+            {
+              "doc_id": "batch_01/003_pagewise_order_form/OF-2025-090.txt",
+              "quote": "| PW-TEAM | Pagewise Team seat | 12.00 | 50 |"
+            },
+            {
+              "doc_id": "batch_01/003_pagewise_order_form/OF-2025-090.txt",
+              "quote": "Renewal uplift cap: 5%"
+            }
+          ],
+          "invoice_id": "INV-PW-120",
+          "sku": "PW-TEAM",
+          "rule": "term_agreed_without_authority",
+          "action": "request_document",
+          "executed": true,
+          "details": {
+            "period": "2026-10-01..2026-10-31",
+            "missing": "sign-off on amendment AM-2026-06 by an authorised signatory",
+            "holder": "priya.raman@acme-robotics.com",
+            "ref": "AM-2026-06",
+            "agreed_by": "Dev Malhotra, Engineering Manager"
+          },
+          "key": "cannot_determine|Pagewise|INV-PW-120|PW-TEAM|2026-10-01..2026-10-31|AM-2026-06",
+          "id": "feaace9f"
+        },
+        {
+          "cls": "conflict",
+          "vendor": "Cloudkeep Ltd.",
+          "summary": "Sources disagree on the price of CK-STORE-TB: order form OF-2026-019 says $21.50 vs email of 2026-10-01 agreed by priya.raman@acme-robotics.com says $19.50",
+          "amount": "80.00",
+          "evidence": [
+            {
+              "doc_id": "batch_03/207_cloudkeep_oct/INV-CK-402.csv",
+              "quote": "line,CK-STORE-TB,Backup storage,2026-10-01,2026-10-31,40,21.50,860.00"
+            },
+            {
+              "doc_id": "batch_01/002_cloudkeep_order_form/OF-2026-019.txt",
+              "quote": "| CK-STORE-TB | Backup storage, per TB | 21.50 | 40 |"
+            },
+            {
+              "doc_id": "batch_03/204_cloudkeep_price_email",
+              "quote": "Following our call, the price for CK-STORE-TB will be $19.50 per TB effective 2026-10-01"
+            }
+          ],
+          "invoice_id": "INV-CK-402",
+          "sku": "CK-STORE-TB",
+          "rule": "later_email_disagrees_with_signed_terms",
+          "action": "human_review",
+          "executed": false,
+          "details": {
+            "period": "2026-10-01..2026-10-31",
+            "candidates": [
+              "21.50",
+              "19.50"
+            ],
+            "sources": [
+              "order form OF-2026-019",
+              "email of 2026-10-01 agreed by priya.raman@acme-robotics.com"
+            ]
+          },
+          "key": "conflict|Cloudkeep Ltd.|INV-CK-402|CK-STORE-TB|2026-10-01..2026-10-31|",
+          "id": "7a31e82a"
+        },
+        {
+          "cls": "cannot_determine",
+          "vendor": "Tallyhub",
+          "summary": "TH-SEAT billed at $22.00 x 30, more than the terms on file allow; amendment AM-2026-11 is cited but was never received and may change them",
+          "amount": "90.00",
+          "evidence": [
+            {
+              "doc_id": "batch_03/210_tallyhub_nov/INV-TH-233.csv",
+              "quote": "line,TH-SEAT,Seat,2026-11-01,2026-11-30,30,22.00,660.00"
+            },
+            {
+              "doc_id": "batch_03/203_tallyhub_amendment/AM-2026-08.txt",
+              "quote": "| TH-SEAT | Tallyhub seat | 19.00 | 30 |"
+            },
+            {
+              "doc_id": "batch_03/209_tallyhub_notice",
+              "quote": "Hi Priya, your November invoice reflects amendment AM-2026-11, which adds reporting to every seat"
+            }
+          ],
+          "invoice_id": "INV-TH-233",
+          "sku": "TH-SEAT",
+          "rule": "cited_document_missing",
+          "action": "request_document",
+          "executed": true,
+          "details": {
+            "period": "2026-11-01..2026-11-30",
+            "missing": "AM-2026-11",
+            "holder": "billing@tallyhub.co",
+            "ref": "AM-2026-11"
+          },
+          "key": "cannot_determine|Tallyhub|INV-TH-233|TH-SEAT|2026-11-01..2026-11-30|AM-2026-11",
+          "id": "36a8e4cf"
+        }
+      ],
+      "closed": []
+    }
+  ]
+}
