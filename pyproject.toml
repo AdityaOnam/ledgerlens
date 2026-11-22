@@ -4,13 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ledgerlens"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Audit SaaS and cloud invoices against contracts and emails, with evidence for every finding."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Aditya Onam" }]
+keywords = ["invoice", "audit", "saas", "spend", "contracts", "accounts-payable", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial :: Accounting",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/AdityaOnam/ledgerlens"
+Changelog = "https://github.com/AdityaOnam/ledgerlens/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 llm = ["anthropic>=2.8,<3"]
