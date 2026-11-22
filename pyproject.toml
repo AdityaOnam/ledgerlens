@@ -17,7 +17,7 @@ llm = ["anthropic>=2.8,<3"]
 pdf = ["pypdf>=6,<7"]
 xlsx = ["openpyxl>=3.1,<4"]
 ocr = ["pypdf>=6,<7", "pytesseract>=0.3.13,<0.4", "Pillow>=10,<13"]
-dev = ["pytest>=8", "ruff>=0.5", "pypdf>=6,<7", "openpyxl>=3.1,<4"]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "pypdf>=6,<7", "openpyxl>=3.1,<4"]
 
 [project.scripts]
 ledgerlens = "ledgerlens.cli:main"
@@ -35,3 +35,15 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+# Optional extras: imported lazily, and absent from a plain install.
+module = ["anthropic", "anthropic.*", "openpyxl", "openpyxl.*", "pytesseract", "PIL", "PIL.*", "pypdf"]
+ignore_missing_imports = true
