@@ -297,8 +297,9 @@ def facts_from_model(
         *data.get("references", []),
     ]
     vendor = email_vendor(doc, {**vendor_domains, **out.vendor_domains})
-    if statements and vendor is None:
-        notes.append(f"{doc.doc_id}: dropped {len(statements)} statement(s): vendor unknown")
+    if vendor is None:
+        if statements:
+            notes.append(f"{doc.doc_id}: dropped {len(statements)} statement(s): vendor unknown")
         return out
     for c in data.get("cancellations", []):
         made = attempt(

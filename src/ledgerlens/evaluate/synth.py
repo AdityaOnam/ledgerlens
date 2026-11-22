@@ -337,12 +337,12 @@ def _emails(world: World) -> list[tuple[date, str, str, str, str, str, dict[str,
                         f"Cancelling {x.sku}",
                         f"Hi team,\n\nPlease cancel {x.sku} effective {x.effective.isoformat()}. "
                         f"We no longer need it.\n\n{s.name}\n", {}))  # fmt: skip
-        for x in v.credits:
-            out.append((x.sent, f"{slug}_credit_{x.ref.lower()}",
+        for cr in v.credits:
+            out.append((cr.sent, f"{slug}_credit_{cr.ref.lower()}",
                         f"{v.name.split()[0]} Support <support@{v.domain}>", s.address,
                         "About last month's outage",
                         "Sorry for the disruption last month. We will apply a service credit "
-                        f"of ${x.amount:.2f} to your account (ref {x.ref}).\n", {}))  # fmt: skip
+                        f"of ${cr.amount:.2f} to your account (ref {cr.ref}).\n", {}))  # fmt: skip
     for i, cutoff in enumerate(world.cutoffs):
         out.append((cutoff, f"zz_ap_status_{i + 1:02d}", world.ap.address, s.address,
                     "AP batch filed", "All invoices for this batch are filed.\n", {}))  # fmt: skip

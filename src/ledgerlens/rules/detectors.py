@@ -265,9 +265,9 @@ def check_lines(
                         yield conflict
                     continue
                 r = _settled(r, ruled)
-            missing = _missing_documents(mem, inv.vendor)
-            if missing and _over(line, r) > 0:
-                ref = missing[0]
+            absent = _missing_documents(mem, inv.vendor)
+            if absent and _over(line, r) > 0:
+                ref = absent[0]
                 yield _finding(
                     C.CANNOT_DETERMINE,
                     inv,
@@ -315,12 +315,12 @@ def check_lines(
                     )
             if r.licensed_qty is not None and line.qty > r.licensed_qty and not r.true_up_allowed:
                 unit = min(line.unit_price, r.price) if r.price is not None else line.unit_price
-                extra = line.qty - r.licensed_qty
+                excess = line.qty - r.licensed_qty
                 yield _finding(
                     C.SEATS_OVER_LICENSED,
                     inv,
                     line,
-                    unit * extra,
+                    unit * excess,
                     f"{line.qty} {line.sku} billed, {r.licensed_qty} licensed and "
                     "true-up not permitted",
                     "qty_above_licensed_no_true_up",

@@ -34,7 +34,7 @@ def decode(tp: Any, data: Any) -> Any:
         item = typing.get_args(tp)[0]  # tuple[X, ...] or list[X]
         seq = [decode(item, x) for x in data]
         return tuple(seq) if origin is tuple else seq
-    if dataclasses.is_dataclass(tp):
+    if isinstance(tp, type) and dataclasses.is_dataclass(tp):
         hints = typing.get_type_hints(tp)
         return tp(**{k: decode(hints[k], v) for k, v in data.items()})
     if tp is Decimal:
